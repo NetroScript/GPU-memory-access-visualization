@@ -1,6 +1,7 @@
 #include <vector>
 #include <numeric>
 #include <iostream>
+#include "../../src/cuda_mav.cu"
 
 inline void checkCudaError(cudaError_t err) {
     if (err != cudaSuccess) {
@@ -11,11 +12,26 @@ inline void checkCudaError(cudaError_t err) {
 }
 
 
-__global__ void kernel(int prob_size, int * const input, int * output){
+__global__ void kernel(int prob_size, CudaMav<int> * input, CudaMav<int> * output){
     int id = threadIdx.x + blockIdx.x * blockDim.x;
-    if(id < prob_size){
-        output[id] = input[id];
+    if (id < prob_size) {
+        // This works
+        int temp = (int)(*input)[id];
+        (*output)[id] = temp;
+
+        // This also works
+        //(*output)[id] = (int)(*input)[id];
+
+        // Print to console
+        //printf("input[%d] = %d\n", id, static_cast<int>((*input)[id]));
+
+        // This does not work for some reason
+        //(*output)[id] = (*input)[id];
+
+        // This also does not work
+        //output->operator[](id) = input->operator[](id);
     }
+
 }
 
 int main(){
@@ -32,11 +48,20 @@ int main(){
 
     checkCudaError(cudaMemcpy(d_input, h_input.data(), sizeof(int)* prob_size, cudaMemcpyHostToDevice));
 
+    CudaMav<int> input(d_input);
+    CudaMav<int> output(d_output);
+
     constexpr int threads = 32;
     constexpr int blocks = (prob_size/threads)+1;
 
-    kernel<<<blocks, threads>>>(prob_size, d_input, d_output);
+    kernel<<<blocks, threads>>>(prob_size, input.getDevicePointer(), output.getDevicePointer());
     checkCudaError(cudaGetLastError());
+    cudaDeviceSynchronize();
+
+    auto data = input.getGlobalSettings();
+
+    input.analyze("../../../html/basic_template.html", "../../../out/basic_input.html");
+    output.analyze("../../../html/basic_template.html", "../../../out/basic_output.html");
 
     checkCudaError(cudaMemcpy(h_output.data(), d_output, sizeof(int)*prob_size, cudaMemcpyDeviceToHost));
 
