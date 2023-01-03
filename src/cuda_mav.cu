@@ -1,5 +1,5 @@
 #include <stdexcept>
-#include <stdio.h>
+#include <cstdio>
 #include <fstream>
 #include <functional>
 #include <sstream>
@@ -16,7 +16,6 @@ class CudaMav
         int blockDimY;
         int blockDimZ;
         int warpSize;
-        int statusMessage;
         unsigned int originalSize_read;
         unsigned int currentSize_read;
         unsigned int originalSize_write;
@@ -28,16 +27,17 @@ class CudaMav
     struct MemoryAccessLog {
         // Store the address which was addressed
         T* address;
+
         // Store the thread id which accessed the address
-        int threadId;
+        unsigned int threadId;
         // Store the block id which accessed the address
-        int blockId;
+        unsigned int blockId;
 
         // Constructor which decomposes the block and thread id into the packed long
         __host__ __device__ MemoryAccessLog(T* address, int blockId, int threadId) : address(address), threadId(threadId), blockId(blockId) {}
 
         // Empty constructor
-        __host__ __device__ MemoryAccessLog() : address(nullptr), threadId(-1), blockId(-1) {}
+        __host__ __device__ MemoryAccessLog() : address(nullptr), threadId(0), blockId(0) {}
     };
 
 private:
@@ -80,13 +80,23 @@ private:
         AccessProxy() = delete;
 
         // Overload the assignment operator so we can write to the array
-        __device__ void operator = (T value) {
+        __device__ AccessProxy &operator = (const T &value) {
             cudaMav->set(index, value);
+            return *this;
         }
 
-        // Overload the cast operator so we can read from the array
-        // Leaving the explicit out, wont throw an error, but might result in unexpected behaviour
-        __device__ explicit operator T() {
+        // When accessing the array, and also assign a value to the access, we assign AccessProxy to AccessProxy
+        // For this reason we need to define the assignment operator for AccessProxy, so that the actual values get changed
+        __device__ AccessProxy &operator = (const AccessProxy &other) {
+            if (this != &other) {
+                cudaMav->set(index, other.cudaMav->get(other.index));
+            }
+            return *this;
+        }
+
+        // Overload the cast operator, so we can read from the array
+        // Leaving the explicit out, won't throw an error, but might result in unexpected behaviour
+        __device__ /*explicit*/ operator T() const {
             return cudaMav->get(index);
         }
     };
@@ -230,7 +240,7 @@ public:
     __host__ CudaMav(T* array_data, unsigned int size = 100000)
     {
 
-        h_constantData = new GlobalSettings{ -1, -1, -1, -1, -1, -1, -1, 0, size, 0, size, 0};
+        h_constantData = new GlobalSettings{ -1, -1, -1, -1, -1, -1, -1, size, 0, size, 0};
 
         // Allocate the memory on the device for the d_constantData and check if it was successful
         checkCudaError(cudaMalloc(&d_constantData, sizeof(GlobalSettings)), "Could not allocate array to store kernel data on device.");
@@ -277,12 +287,11 @@ public:
             d_constantData->blockDimZ = blockDim.z;
             // Store the warp size
             d_constantData->warpSize = warpSize;
-        };
-
+        }
 
         // Get the block and thread id
-        int blockId = blockIdx.x + blockIdx.y * gridDim.x + gridDim.x * gridDim.y * blockIdx.z;
-        int threadId = threadIdx.x + threadIdx.y * blockDim.x + blockDim.x * blockDim.y * threadIdx.z;
+        unsigned int blockId = blockIdx.x + blockIdx.y * gridDim.x + gridDim.x * gridDim.y * blockIdx.z;
+        unsigned int threadId = threadIdx.x + threadIdx.y * blockDim.x + blockDim.x * blockDim.y * threadIdx.z;
 
         // Get the address of the data
         T* address = &d_data[index];
@@ -323,11 +332,11 @@ public:
             d_constantData->blockDimZ = blockDim.z;
             // Store the warp size
             d_constantData->warpSize = warpSize;
-        };
+        }
 
         // Get the block and thread id
-        int blockId = blockIdx.x + blockIdx.y * gridDim.x + gridDim.x * gridDim.y * blockIdx.z;
-        int threadId = threadIdx.x + threadIdx.y * blockDim.x + blockDim.x * blockDim.y * threadIdx.z;
+        unsigned int blockId = blockIdx.x + blockIdx.y * gridDim.x + gridDim.x * gridDim.y * blockIdx.z;
+        unsigned int threadId = threadIdx.x + threadIdx.y * blockDim.x + blockDim.x * blockDim.y * threadIdx.z;
 
         // Get the address of the data
         T* address = &d_data[index];

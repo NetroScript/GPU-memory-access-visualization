@@ -15,21 +15,7 @@ inline void checkCudaError(cudaError_t err) {
 __global__ void kernel(int prob_size, CudaMav<int> * input, CudaMav<int> * output){
     int id = threadIdx.x + blockIdx.x * blockDim.x;
     if (id < prob_size) {
-        // This works
-        int temp = (int)(*input)[id];
-        (*output)[id] = temp;
-
-        // This also works
-        //(*output)[id] = (int)(*input)[id];
-
-        // Print to console
-        //printf("input[%d] = %d\n", id, static_cast<int>((*input)[id]));
-
-        // This does not work for some reason
-        //(*output)[id] = (*input)[id];
-
-        // This also does not work
-        //output->operator[](id) = input->operator[](id);
+        (*output)[id] = (*input)[id];
     }
 
 }
