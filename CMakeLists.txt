@@ -7,11 +7,9 @@ set(CMAKE_CUDA_ARCHITECTURES 61)
 
 project(GPU_memory_access_visualization LANGUAGES CUDA)
 
+# define header only target
+add_library(CUDA_MAV_HEADER INTERFACE)
+target_include_directories(CUDA_MAV_HEADER INTERFACE ${PROJECT_SOURCE_DIR}/include)
 
-
-include_directories(.)
-include_directories(src)
-
-
-add_executable(GPU_memory_access_visualization
-        src/cuda_mav.cu src/cuda_mav.h)
+# the visualization function is no standalone application, therefore we test it with some examples
+add_subdirectory(examples/basic)
