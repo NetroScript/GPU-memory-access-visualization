@@ -21,7 +21,7 @@ __global__ void kernel(int prob_size, CudaMemAccessLogger<int> * input, CudaMemA
 }
 
 int main(){
-    constexpr int prob_size = 100;
+    constexpr int prob_size = 1000;
     
     std::vector<int> h_input(prob_size);
     std::iota(h_input.begin(), h_input.end(), 0);
@@ -34,8 +34,11 @@ int main(){
 
     checkCudaError(cudaMemcpy(d_input, h_input.data(), sizeof(int)* prob_size, cudaMemcpyHostToDevice));
 
-    CudaMemAccessLogger<int> input(d_input);
-    CudaMemAccessLogger<int> output(d_output);
+    CudaMemAccessStorage<int> memAccessStorage(10000);
+
+
+    CudaMemAccessLogger<int> input(d_input, &memAccessStorage);
+    CudaMemAccessLogger<int> output(d_output, &memAccessStorage);
 
     constexpr int threads = 32;
     constexpr int blocks = (prob_size/threads)+1;
@@ -44,10 +47,7 @@ int main(){
     checkCudaError(cudaGetLastError());
     cudaDeviceSynchronize();
 
-    auto data = input.getGlobalSettings();
-
-    input.analyze("../../../html/basic_template.html", "../../../out/basic_input.html");
-    output.analyze("../../../html/basic_template.html", "../../../out/basic_output.html");
+    memAccessStorage.generateOutput("../../../html/basic_template.html", "../../../out/basic.html");
 
     checkCudaError(cudaMemcpy(h_output.data(), d_output, sizeof(int)*prob_size, cudaMemcpyDeviceToHost));
 
