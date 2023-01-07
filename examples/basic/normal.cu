@@ -12,7 +12,7 @@ inline void checkCudaError(cudaError_t err) {
 }
 
 
-__global__ void kernel(int prob_size, CudaMav<int> * input, CudaMav<int> * output){
+__global__ void kernel(int prob_size, CudaMemAccessLogger<int> * input, CudaMemAccessLogger<int> * output){
     int id = threadIdx.x + blockIdx.x * blockDim.x;
     if (id < prob_size) {
         (*output)[id] = (*input)[id];
@@ -34,8 +34,8 @@ int main(){
 
     checkCudaError(cudaMemcpy(d_input, h_input.data(), sizeof(int)* prob_size, cudaMemcpyHostToDevice));
 
-    CudaMav<int> input(d_input);
-    CudaMav<int> output(d_output);
+    CudaMemAccessLogger<int> input(d_input);
+    CudaMemAccessLogger<int> output(d_output);
 
     constexpr int threads = 32;
     constexpr int blocks = (prob_size/threads)+1;

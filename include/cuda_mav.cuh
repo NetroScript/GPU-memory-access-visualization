@@ -10,7 +10,7 @@
 
 // Define a custom template class which holds the data for the CUDA kernel
 template <typename T>
-class CudaMav
+class CudaMemAccessLogger
 {
     struct GlobalSettings {
         int gridDimX;
@@ -20,28 +20,55 @@ class CudaMav
         int blockDimY;
         int blockDimZ;
         int warpSize;
-        unsigned int originalSize_read;
-        unsigned int currentSize_read;
-        unsigned int originalSize_write;
-        unsigned int currentSize_write;
-
+        unsigned int originalSize;
+        unsigned int currentSize;
     };
 
     // Have a struct to store logging data
     struct MemoryAccessLog {
+    private:
         // Store the address which was addressed
         T* address;
-
-        // Store the thread id which accessed the address
-        unsigned int threadId;
+        // Store the thread id which accessed the address, additionally the uppermost bit is used to store if the access was a read or write, 0 for read, 1 for write
+        unsigned int threadId_accessType;
         // Store the block id which accessed the address
         unsigned int blockId;
+    public:
 
         // Constructor which decomposes the block and thread id into the packed long
-        __host__ __device__ MemoryAccessLog(T* address, int blockId, int threadId) : address(address), threadId(threadId), blockId(blockId) {}
+        __host__ __device__ MemoryAccessLog(T* address, int blockId, int threadId, bool read = true) : address(address), threadId_accessType(threadId), blockId(blockId) {
+            // Set the uppermost bit to 1 if the access was a write, 0 if it was a read
+            if (!read) {
+                threadId_accessType |= 1 << 31;
+            } else {
+                threadId_accessType &= ~(1 << 31);
+            }
+        }
 
         // Empty constructor
-        __host__ __device__ MemoryAccessLog() : address(nullptr), threadId(0), blockId(0) {}
+        __host__ __device__ MemoryAccessLog() : address(nullptr), threadId_accessType(0), blockId(0) {}
+
+        // Getter for the address
+        __host__ T* Address() const {
+            return address;
+        }
+
+        // Getter for the thread id
+        __host__ int ThreadId() const {
+            return threadId_accessType & ~(1 << 31);
+        }
+
+        // Getter for the block id
+        __host__ int BlockId() const {
+            return blockId;
+        }
+
+        // Getter for the access type
+        __host__ bool IsRead() const {
+            return (threadId_accessType & (1 << 31)) == 0;
+        }
+
+
     };
 
 private:
@@ -55,32 +82,26 @@ private:
     T* d_data;
 
     // Also have an instance of this class allocated on the device
-    CudaMav<T>* d_this;
+    CudaMemAccessLogger<T>* d_this;
 
     // Store if memory was fetched from the device
     bool fetchedFromDevice = false;
 
-    // Have a pointer to a list of memory access logs for reading
-    MemoryAccessLog* d_memoryAccessLog_reading = nullptr;
+    // Have a pointer to a list of memory access logs
+    MemoryAccessLog* d_memoryAccessLog = nullptr;
     // Have a pointer to a list of memory access logs on the host
-    MemoryAccessLog* h_memoryAccessLog_reading = nullptr;
-
-    // Have a pointer to a list of memory access logs for writing
-    MemoryAccessLog* d_memoryAccessLog_writing = nullptr;
-    // Have a pointer to a list of memory access logs on the host
-    MemoryAccessLog* h_memoryAccessLog_writing = nullptr;
-
+    MemoryAccessLog* h_memoryAccessLog = nullptr;
 
     // Implement a proxy class so we can both read and write from the array when accessing the array operator
     class AccessProxy {
-        // Have a reference to the CudaMav class
-        CudaMav<T>* cudaMav;
+        // Have a reference to the CudaMemAccessLogger class
+        CudaMemAccessLogger<T>* cudaMav;
         // Have a reference to the index
         int index;
 
     public:
-        // Constructor which takes a reference to the CudaMav class and the index
-        __device__ AccessProxy(CudaMav<T>* cudaMav, int index) : cudaMav(cudaMav), index(index) {}
+        // Constructor which takes a reference to the CudaMemAccessLogger class and the index
+        __device__ AccessProxy(CudaMemAccessLogger<T>* cudaMav, int index) : cudaMav(cudaMav), index(index) {}
         AccessProxy() = delete;
 
         // Overload the assignment operator so we can write to the array
@@ -125,17 +146,9 @@ private:
         // First fetch the h_constantData from the device
         checkCudaError(cudaMemcpy(h_constantData, d_constantData, sizeof(GlobalSettings), cudaMemcpyDeviceToHost), "Could not copy constant data from device.");
 
-        // Copy the data back from the device for reading
-        checkCudaError(cudaMemcpy(h_memoryAccessLog_reading, d_memoryAccessLog_reading, sizeof(MemoryAccessLog) * h_constantData->originalSize_read, cudaMemcpyDeviceToHost), "Could not copy memory access logs from device.");
-        // Copy the data back from the device for writing
-        checkCudaError(cudaMemcpy(h_memoryAccessLog_writing, d_memoryAccessLog_writing, sizeof(MemoryAccessLog) * h_constantData->originalSize_write, cudaMemcpyDeviceToHost), "Could not copy memory access logs from device.");
+        // Copy the data back from the device
+        checkCudaError(cudaMemcpy(h_memoryAccessLog, d_memoryAccessLog, sizeof(MemoryAccessLog) * h_constantData->originalSize_read, cudaMemcpyDeviceToHost), "Could not copy memory access logs from device.");
 
-
-        // Free up the memory on the device
-        checkCudaError(cudaFree(d_constantData), "Could not free constant data on device.");
-        checkCudaError(cudaFree(d_memoryAccessLog_reading), "Could not free memory access logs (reading) on device.");
-        checkCudaError(cudaFree(d_memoryAccessLog_writing), "Could not free memory access logs (writing) on device.");
-        checkCudaError(cudaFree(d_this), "Could not free class instance pointer on device.");
 
         // Set the fetched from device flag to true
         fetchedFromDevice = true;
@@ -231,17 +244,15 @@ private:
 public:
 
     // Constructor to create an empty class
-    __device__ __host__ CudaMav() {
+    __device__ __host__ CudaMemAccessLogger() {
         // Set the data pointer to null
         d_data = nullptr;
-        // Set the memory access log pointer to null for reading
-        d_memoryAccessLog_reading = nullptr;
-        // Set the memory access log pointer to null for writing
-        d_memoryAccessLog_writing = nullptr;
+        // Set the memory access log pointer to null
+        d_memoryAccessLog = nullptr;
     }
 
     // Constructor which allocates the memory on the device
-    __host__ CudaMav(T* array_data, unsigned int size = 100000)
+    __host__ CudaMemAccessLogger(T* array_data, unsigned int size = 100000)
     {
 
         h_constantData = new GlobalSettings{ -1, -1, -1, -1, -1, -1, -1, size, 0, size, 0};
@@ -254,30 +265,24 @@ public:
         // Store the passed data pointer within the class
         d_data = array_data;
 
-        // Allocate the memory on the device for the d_memoryAccessLog_reading and check if it was successful
-        checkCudaError(cudaMalloc(&d_memoryAccessLog_reading, sizeof(MemoryAccessLog) * size), "Could not allocate array to store memory access logs on device. (reading)");
-        // Also allocate the memory on the host for the h_memoryAccessLog_reading and check if it was successful
-        h_memoryAccessLog_reading = new MemoryAccessLog[size];
+        // Allocate the memory on the device for the d_memoryAccessLog and check if it was successful
+        checkCudaError(cudaMalloc(&d_memoryAccessLog, sizeof(MemoryAccessLog) * size), "Could not allocate array to store memory access logs on device. (reading)");
+        // Also allocate the memory on the host for the h_memoryAccessLog
+        h_memoryAccessLog = new MemoryAccessLog[size];
 
         // Copy the empty data to the device
-        checkCudaError(cudaMemcpy(d_memoryAccessLog_reading, h_memoryAccessLog_reading, sizeof(MemoryAccessLog) * size, cudaMemcpyHostToDevice), "Could not copy memory access logs to device. (reading)");
-
-        // To the same for writing
-        checkCudaError(cudaMalloc(&d_memoryAccessLog_writing, sizeof(MemoryAccessLog) * size), "Could not allocate array to store memory access logs on device. (writing)");
-        h_memoryAccessLog_writing = new MemoryAccessLog[size];
-        checkCudaError(cudaMemcpy(d_memoryAccessLog_writing, h_memoryAccessLog_writing, sizeof(MemoryAccessLog) * size, cudaMemcpyHostToDevice), "Could not copy memory access logs to device. (writing)");
+        checkCudaError(cudaMemcpy(d_memoryAccessLog, h_memoryAccessLog, sizeof(MemoryAccessLog) * size, cudaMemcpyHostToDevice), "Could not copy memory access logs to device.");
 
         // Now we finished initializing the class, so we need to create the copy of this class on the device
         // Allocate the memory on the device for the d_this and check if it was successful
-        checkCudaError(cudaMalloc(&d_this, sizeof(CudaMav<T>)), "Could not allocate array to store this class on device.");
+        checkCudaError(cudaMalloc(&d_this, sizeof(CudaMemAccessLogger<T>)), "Could not allocate array to store this class on device.");
         // Copy the empty data to the device
-        checkCudaError(cudaMemcpy(d_this, this, sizeof(CudaMav<T>), cudaMemcpyHostToDevice), "Could not copy this class to device.");
+        checkCudaError(cudaMemcpy(d_this, this, sizeof(CudaMemAccessLogger<T>), cudaMemcpyHostToDevice), "Could not copy this class to device.");
 
     }
 
-    __device__ T get(unsigned int index) {
-        // Atomically increase the currentSize by 1
-        int current_index = atomicAdd(&d_constantData->currentSize_read, 1);
+    __device__ int getStorageIndex() {// Atomically increase the currentSize by 1
+        int current_index = atomicAdd(&d_constantData->currentSize, 1);
 
         // First check if the currentSize is zero, if so we need to initialize the additional data variables, needed later to restore the data
         if (current_index == 0) {
@@ -292,6 +297,11 @@ public:
             // Store the warp size
             d_constantData->warpSize = warpSize;
         }
+        return current_index;
+    }
+
+    __device__ T get(unsigned int index) {
+        int current_index = getStorageIndex();
 
         // Get the block and thread id
         unsigned int blockId = blockIdx.x + blockIdx.y * gridDim.x + gridDim.x * gridDim.y * blockIdx.z;
@@ -303,7 +313,7 @@ public:
         // Check that our current index is less than the original size
         if (current_index < d_constantData->originalSize_read) {
             // Store the data in the memory access log
-            d_memoryAccessLog_reading[current_index] = MemoryAccessLog(address, blockId, threadId);
+            d_memoryAccessLog[current_index] = MemoryAccessLog(address, blockId, threadId);
         }
 
 
@@ -318,25 +328,10 @@ public:
         //printf("Writing to index %d \n", index);
 
         // Atomically increase the currentSize by 1
-        int current_index = atomicAdd(&d_constantData->currentSize_write, 1);
+        int current_index = getStorageIndex();
 
         // Write the value to the data
         d_data[index] = value;
-
-
-        // First check if the currentSize is zero, if so we need to initialize the additional data variables, needed later to restore the data
-        if (current_index == 0) {
-            // Store the grid dimensions
-            d_constantData->gridDimX = gridDim.x;
-            d_constantData->gridDimY = gridDim.y;
-            d_constantData->gridDimZ = gridDim.z;
-            // Store the block dimensions
-            d_constantData->blockDimX = blockDim.x;
-            d_constantData->blockDimY = blockDim.y;
-            d_constantData->blockDimZ = blockDim.z;
-            // Store the warp size
-            d_constantData->warpSize = warpSize;
-        }
 
         // Get the block and thread id
         unsigned int blockId = blockIdx.x + blockIdx.y * gridDim.x + gridDim.x * gridDim.y * blockIdx.z;
@@ -348,7 +343,7 @@ public:
         // Check that our current index is less than the original size
         if (current_index < d_constantData->originalSize_write) {
             // Store the data in the memory access log
-            d_memoryAccessLog_writing[current_index] = MemoryAccessLog(address, blockId, threadId);
+            d_memoryAccessLog[current_index] = MemoryAccessLog(address, blockId, threadId, false);
         }
 
         // Print the accessed data
@@ -357,12 +352,16 @@ public:
 
 
     // Destructor to free the memory on the device
-    __device__ __host__ ~CudaMav()
+    __host__ ~CudaMemAccessLogger()
     {
         // Free the memory on the host
-        delete[] h_memoryAccessLog_reading;
-        delete[] h_memoryAccessLog_writing;
+        delete[] h_memoryAccessLog;
         delete h_constantData;
+
+        // Free up the memory on the device
+        checkCudaError(cudaFree(d_constantData), "Could not free constant data on device.");
+        checkCudaError(cudaFree(d_memoryAccessLog), "Could not free memory access logs on device.");
+        checkCudaError(cudaFree(d_this), "Could not free class instance pointer on device.");
     }
 
     // Array operator overload on the device
@@ -391,7 +390,7 @@ public:
 #endif
     }
 
-    __host__ CudaMav<T>* getDevicePointer() {
+    __host__ CudaMemAccessLogger<T>* getDevicePointer() {
         return d_this;
     }
 
