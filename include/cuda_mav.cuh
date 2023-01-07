@@ -1,8 +1,12 @@
+#pragma once
+
 #include <stdexcept>
 #include <cstdio>
 #include <fstream>
 #include <functional>
 #include <sstream>
+#include <vector>
+#include <iostream>
 
 // Define a custom template class which holds the data for the CUDA kernel
 template <typename T>

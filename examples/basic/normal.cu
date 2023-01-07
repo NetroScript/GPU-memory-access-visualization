@@ -1,7 +1,7 @@
 #include <vector>
 #include <numeric>
 #include <iostream>
-#include "../../src/cuda_mav.cu"
+#include "cuda_mav.cuh"
 
 inline void checkCudaError(cudaError_t err) {
     if (err != cudaSuccess) {
