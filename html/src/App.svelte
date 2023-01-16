@@ -1,69 +1,14 @@
 <Layout>
 
-  <div class="container h-full mx-auto flex justify-center items-center">
-    <div class="space-y-0.5 text-center">
+  <div class="container h-full mx-auto flex justify-center items-center flex flex-row">
+  {#each memoryRegions as memoryRegion}
 
-      {#each addresses as address}
-        <div class="flex bg-cyan-700 m-0 w-56">
-          <div class="bg-cyan-400 p-4 flex-1">
-            {"0x"+(address.toString(16)).padStart(8, '0')}
-          </div>
-          <div class="flex flex-col flex-1 bg-cyan-800">
-            {#if MemoryAccesses.has(address)}
-              <div class="flex-1 bg-cyan-600" on:click={() => {
-						drawerStore.open( {
-							position: "bottom",
-						})
-						activeAddress = address
-						isWrite = 0}}>
-                {MemoryAccesses.get(address)[0].length}</div>
-              <div class="flex-1 bg-orange-700"  on:click={() => {
-						drawerStore.open( {
-							position: "bottom",
-						})
-						activeAddress = address
-						isWrite = 1}}>
-                {MemoryAccesses.get(address)[1].length}</div>
-            {/if}
-          </div>
-        </div>
+    <VisualizeMemoryRegion MemoryRegion="{memoryRegion}"/>
 
-      {/each}
-
-    </div>
-
-    <style lang="postcss">
-        figure {
-            @apply flex relative flex-col;
-        }
-        figure svg,
-        .img-bg {
-            @apply w-64 h-64 md:w-80 md:h-80;
-        }
-        .img-bg {
-            @apply bg-gradient-to-r from-primary-300 to-warning-300;
-            @apply absolute z-[-1] rounded-full blur-[64px];
-            animation: pulse 5s cubic-bezier(0, 0, 0, 0.5) infinite;
-        }
-        @keyframes pulse {
-            50% {
-                transform: scale(1.5);
-            }
-        }
-    </style>
+  {/each}
   </div>
-  <Drawer>
-    {#if activeAddress > -1}
 
-      {#each MemoryAccesses.get(activeAddress)[isWrite] as access}
-        <div class="flex bg-cyan-800 mb-1 break-words overflow-hidden">
-          <div class="bg-cyan-900 p-4 flex-1 break-words max-w-full ">
-            {JSON.stringify(access)}
-          </div>
-        </div>
-      {/each}
-    {/if}
-  </Drawer>
+  <InspectDrawer />
 </Layout>
 
 <script lang="ts">
@@ -74,87 +19,46 @@
 
   // First load the data, here we are generating random data for showcase
 
-  import {AccessInstance, type GenericInformation} from "./lib/types"
+  BigInt.prototype.toJSON = function() { return this.toString() }
 
-
-  const data: AccessInstance[] = [];
+  import { AccessInstance, type GenericInformation, MemoryRegionManager, type OutputJSON } from "./lib/types";
 
   import {Drawer, drawerStore} from '@skeletonlabs/skeleton';
+  import { dummyData } from "./lib/loadDummyData";
+  import InspectDrawer from "./components/InspectDrawer.svelte";
+  import VisualizeMemoryRegion from "./components/VisualizeMemoryRegion.svelte";
 
 
-  // Temporarily fill random data, for that first generate a generic info
-  const info: GenericInformation = {
-    GridDimensions: {
-      x: 32,
-      y: 1,
-      z: 1
-    },
-    BlockDimensions:
-      {
-        x: 1,
-        y: 1,
-        z: 1
-      },
-    WarpSize: 32,
-  }
+  // Load the general data
+  // We actually do a JSON.parse here, as it is faster using the JSON parser than for the browser to evaluate an existing JSON object in JavaScript
+  // This is because the parser for the DOM needs to do more complex work.
+  // Additionally this leaves us an easy entry point which will not get simplified away (which normally a comment might be)
 
-  // Generate currentSize AccessInstances
+  // But actually for development mode load in a file
+  const MemoryData: OutputJSON = JSON.parse(import.meta.env.DEV ? (dummyData) : `//JS_TEMPLATE`);
 
-  for (let i = 0; i < 1000; i++) {
-    data.push(new AccessInstance(
-      // As address generate random 64 bit hex value
-      Math.floor(Math.random() * 2**8).toString(16),
-      // Fill in random thread id which is between 0 and 31
-      Math.floor(Math.random() * 32),
-      // Same for the block
-      Math.floor(Math.random() * 32),
-      // Random either read or write
-      Math.random() > 0.5,
-      info
-    ));
-  }
+  const info = MemoryData.GlobalSettings;
 
-  // Have the data structure storing all access to the corresponding memory location
-  // This maps from the address (as a string) to a tuple of all read accesses as array, and all write accesses as array
-  const MemoryAccesses = new Map<bigint, [AccessInstance[], AccessInstance[]]>();
+  // Generate AccessInstances from the pure data
+  const data: AccessInstance[] = MemoryData.MemoryAccessLogs.map(([address, blockID, threadID, isRead]) => new AccessInstance(address, blockID, threadID, isRead, info));
 
-  let lowestAddress = 2n**64n;
-  let highestAddress = 0n;
+  // Generate MemoryRegionManagers
+  const memoryRegions: MemoryRegionManager[] = MemoryData.MemoryRegions.map(region => new MemoryRegionManager(region));
 
-  // Iterate all of our data
-  data.forEach(entry => {
-    if (entry.address < lowestAddress) {
-      lowestAddress = entry.addressInteger;
-    }
-    if (entry.address > highestAddress) {
-      highestAddress = entry.addressInteger;
-    }
+  // Store all our memory accesses in the memoryRegions
+  // This is relatively slow as we need to iterate over all memory accesses and then again over all memory regions, maybe this can be optimized, but the number of memory Regions should be low, so this should not be a problem
+  data.forEach(access => {
+    memoryRegions.forEach(region => {
+      region.addMemoryAccessIfInRegion(access);
+    })
+  })
 
-    // Check if we already have an entry for this address
-    if (!MemoryAccesses.has(entry.addressInteger)) {
-      // If not, create a new entry
-      MemoryAccesses.set(entry.addressInteger, [[], []]);
-    }
+  // For each memory region, bake all data which gets processed after the data is loaded
+  memoryRegions.forEach(region => {
+    region.bake();
+  })
 
-    // Get the entry
-    const [read, write] = MemoryAccesses.get(entry.addressInteger)!;
 
-    // Check if we have a read or write
-    if (entry.isRead) {
-      read.push(entry);
-    } else {
-      write.push(entry);
-    }
-  });
 
-  // Make a string array of all addresses within bounds
-  const addresses : bigint[] = [];
-  for (let i = lowestAddress; i <= highestAddress; i++) {
-    addresses.push(i);
-  }
 
-  let activeAddress = -1n;
-  let isWrite = -1;
-
-  BigInt.prototype.toJSON = function() { return this.toString() }
 </script>
