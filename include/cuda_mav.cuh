@@ -144,7 +144,8 @@ public:
 
         for (auto region : memoryRegions) {
                 htmlStream << "<h2>Region: " << std::get<3>(region) << "</h2>" << std::endl;
-                htmlStream << "<p>Start Address: " << std::get<0>(region) << " (End Address:) " << std::get<0>(region)+ std::get<1>(region) * std::get<2>(region) << "</p>" << std::endl;
+                // As the memory region is already a pointer of the correct data type, we do not actually need to multiply the size by the size of the data type
+                htmlStream << "<p>Start Address: " << std::get<0>(region) << " (End Address:) " << std::get<0>(region) + std::get<1>(region) << "</p>" << std::endl;
                 htmlStream << "<p>Number of Elements: " << std::get<1>(region) << "</p>" << std::endl;
                 htmlStream << "<p>Size of Single Element: " << std::get<2>(region) << "</p>" << std::endl;
         }
@@ -224,7 +225,8 @@ public:
             // Store the start address, number of elements and the size of a single element
             jsStream << "{";
             jsStream << "\"StartAddress\": \"" << std::hex << std::get<0>(region) << "\",";
-            jsStream << "\"EndAddress\": \"" << std::get<0>(region) + std::get<1>(region) * std::get<2>(region) << "\",";
+            // As the memory region is already a pointer of the correct data type, we do not actually need to multiply the size by the size of the data type
+            jsStream << "\"EndAddress\": \"" << std::get<0>(region) + std::get<1>(region) << "\",";
             jsStream << "\"NumberOfElements\": " << std::dec << std::get<1>(region) << ",";
             jsStream << "\"SizeOfSingleElement\": " << std::get<2>(region) << ",";
             jsStream << "\"Name\": \"" << std::get<3>(region) << "\"";
