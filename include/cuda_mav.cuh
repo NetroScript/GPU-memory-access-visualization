@@ -89,9 +89,6 @@ private:
     // Store the memory regions by storing the starting address, the amount of elements, the size of a single element and a name
     std::vector<std::tuple<T*, size_t, size_t, std::string>> memoryRegions;
 
-    // Store if memory was fetched from the device
-    bool fetchedFromDevice = false;
-
     // Helper function to format and throw CUDA errors
     void checkCudaError(cudaError_t err, std::string const &message = "Cuda Error.") {
         if (err != cudaSuccess) {
@@ -100,11 +97,12 @@ private:
         }
     }
 
+public:
     // Define the default function for basic HTML processing
     // The first element in the tuple is the HTML code, the second the JS code
     // For this function the second will be empty
-    std::tuple<std::string, std::string>
-    parseDataForStaticHTML(GlobalSettings settingsStruct, std::vector<MemoryAccessLog> accessLogs) {
+    static std::tuple<std::string, std::string>
+    parseDataForStaticHTML(GlobalSettings settingsStruct,std::vector<std::tuple<T*, size_t, size_t, std::string>> memoryRegions, std::vector<MemoryAccessLog> accessLogs) {
 
         std::stringstream htmlStream;
 
@@ -168,23 +166,98 @@ private:
     // Define the default function for basic HTML processing
     // The first element in the tuple is the HTML code, the second the JS code
     // For this function the first will be empty
-    std::tuple<std::string, std::string>
-    parseDataForJSPage(GlobalSettings settingsStruct, std::vector<MemoryAccessLog> accessLogs) {
+    static std::tuple<std::string, std::string>
+    parseDataForJSPage(GlobalSettings settingsStruct,std::vector<std::tuple<T*, size_t, size_t, std::string>> memoryRegions, std::vector<MemoryAccessLog> accessLogs) {
 
         std::stringstream jsStream;
 
+        // Create a JSON object which describes all the available data
+        // We will have one key GlobalSettings, one key MemoryRegions, and one key MemoryAccessLogs
+
+        // Start the JSON object
+        jsStream << "{";
+
+        // Add the GlobalSettings key
+        jsStream << "\"GlobalSettings\": {";
+
+        // Store all settings
+
+        // First store the grid dimensions
+        jsStream << "\"GridDimensions\": {";
+        jsStream << "\"x\": " << settingsStruct.gridDimX << ",";
+        jsStream << "\"y\": " << settingsStruct.gridDimY << ",";
+        jsStream << "\"z\": " << settingsStruct.gridDimZ;
+        jsStream << "},";
+
+        // Then store the block dimensions
+        jsStream << "\"BlockDimensions\": {";
+        jsStream << "\"x\": " << settingsStruct.blockDimX << ",";
+        jsStream << "\"y\": " << settingsStruct.blockDimY << ",";
+        jsStream << "\"z\": " << settingsStruct.blockDimZ;
+        jsStream << "},";
+
+        // Then store the warp size
+        jsStream << "\"WarpSize\": " << settingsStruct.warpSize;
+
+        // Close the GlobalSettings object
+        jsStream << "},";
+
+        // Add the MemoryRegions key
+        jsStream << "\"MemoryRegions\": [";
+
+        // Loop through all memory regions and store them
+        for (auto region : memoryRegions) {
+            // Store the start address, number of elements and the size of a single element
+            jsStream << "{";
+            jsStream << "\"StartAddress\": \"" << std::hex << std::get<0>(region) << "\",";
+            jsStream << "\"EndAddress\": \"" << std::get<0>(region) + std::get<1>(region) * std::get<2>(region) << "\",";
+            jsStream << "\"NumberOfElements\": " << std::dec << std::get<1>(region) << ",";
+            jsStream << "\"SizeOfSingleElement\": " << std::get<2>(region) << ",";
+            jsStream << "\"Name\": \"" << std::get<3>(region) << "\"";
+            jsStream << "}";
+
+            // If this is not the last element, add a comma
+            if (region != memoryRegions.back()) {
+                jsStream << ",";
+            }
+        }
+
+        // Close the MemoryRegions array
+        jsStream << "],";
+
+        // Add the MemoryAccessLogs key
+        jsStream << "\"MemoryAccessLogs\": [";
+
+        // Loop through all memory access logs and store them
+        // To save on storage space and parsing time (as this is the biggest part of the data) we store an array with the data
+        // entries directly instead of using an object with names for each entry
+        for (auto &log: accessLogs) {
+            jsStream << "[";
+            jsStream << "\"" <<  std::hex << log.Address() << "\",";
+            jsStream << std::dec << log.BlockId() << ",";
+            jsStream << log.ThreadId() << ",";
+            jsStream << (log.IsRead() ? "true" : "false");
+            jsStream << "]";
+
+            // If this is not the last element, add a comma
+            if (&log != &accessLogs.back()) {
+                jsStream << ",";
+            }
+        }
+
+        // Close the MemoryAccessLogs array
+        jsStream << "]";
+
+        // Close the JSON object
+        jsStream << "}";
+
+        // Return the JS code
         return std::make_tuple("", jsStream.str());
     }
 
-
+private:
     // Define function to load back data
     void fetchData() {
-        // Check if data was fetched from the device
-        if (fetchedFromDevice) {
-            // If so, return
-            return;
-        }
-
         // First fetch the h_constantData from the device
         checkCudaError(cudaMemcpy(h_constantData, d_constantData, sizeof(GlobalSettings), cudaMemcpyDeviceToHost),
                        "Could not copy constant data from device.");
@@ -193,9 +266,6 @@ private:
         checkCudaError(
                 cudaMemcpy(h_memoryAccessLog, d_memoryAccessLog, sizeof(MemoryAccessLog) * h_constantData->originalSize,
                            cudaMemcpyDeviceToHost), "Could not copy memory access logs from device.");
-
-        // Set the fetched from device flag to true
-        fetchedFromDevice = true;
     }
 
     __device__ int getStorageIndex() {// Atomically increase the currentSize by 1
@@ -305,10 +375,10 @@ public:
         }
     }
 
-    // Function to analyze the data which also frees up all used memory
+        // Function to analyze the data which also frees up all used memory
     // As third parameter a function lambda can be passed which is called for each memory access
     void generateOutput(const std::string template_file, const std::string &output_path,
-                        std::function<std::tuple<std::string, std::string>(GlobalSettings settingsStruct,
+                        std::function<std::tuple<std::string, std::string>(GlobalSettings settingsStruct, std::vector<std::tuple<T*, size_t, size_t, std::string>> memoryRegions,
                                                                            std::vector<MemoryAccessLog> accessLogs)> customGenerationFunction = nullptr) {
         // Fetch the data back from the device
         fetchData();
@@ -339,11 +409,11 @@ public:
 
         // Run the custom generation function, if one was passed
         if (customGenerationFunction != nullptr) {
-            placeholderReplacement = customGenerationFunction(*h_constantData, accessLogs);
+            placeholderReplacement = customGenerationFunction(*h_constantData, memoryRegions, accessLogs);
         }
             // If none was passed, use a default function
         else {
-            placeholderReplacement = parseDataForStaticHTML(*h_constantData, accessLogs);
+            placeholderReplacement = parseDataForStaticHTML(*h_constantData, memoryRegions, accessLogs);
         }
 
         // Replace "<!-- HTML_TEMPLATE -->" with the HTML template

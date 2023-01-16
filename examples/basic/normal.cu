@@ -47,7 +47,7 @@ int main(){
     checkCudaError(cudaGetLastError());
     cudaDeviceSynchronize();
 
-    memAccessStorage.generateOutput("../../../html/basic_template.html", "../../../out/basic.html");
+    memAccessStorage.generateOutput("../../../html/template.json", "../../../out/basic.json", CudaMemAccessStorage<int>::parseDataForJSPage);
 
     checkCudaError(cudaMemcpy(h_output.data(), d_output, sizeof(int)*prob_size, cudaMemcpyDeviceToHost));
 
