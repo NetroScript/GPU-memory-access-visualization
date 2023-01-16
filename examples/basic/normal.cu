@@ -37,8 +37,8 @@ int main(){
     CudaMemAccessStorage<int> memAccessStorage(10000);
 
 
-    CudaMemAccessLogger<int> input(d_input, &memAccessStorage);
-    CudaMemAccessLogger<int> output(d_output, &memAccessStorage);
+    CudaMemAccessLogger<int> input(d_input, prob_size, "Input Datastructure", &memAccessStorage);
+    CudaMemAccessLogger<int> output(d_output, prob_size, "Output Datastructure", &memAccessStorage);
 
     constexpr int threads = 32;
     constexpr int blocks = (prob_size/threads)+1;

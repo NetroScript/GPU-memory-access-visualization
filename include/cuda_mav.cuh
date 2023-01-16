@@ -86,6 +86,8 @@ private:
     // Have a pointer to a list of memory access logs on the host
     MemoryAccessLog *h_memoryAccessLog = nullptr;
 
+    // Store the memory regions by storing the starting address, the amount of elements, the size of a single element and a name
+    std::vector<std::tuple<T*, size_t, size_t, std::string>> memoryRegions;
 
     // Store if memory was fetched from the device
     bool fetchedFromDevice = false;
@@ -125,8 +127,17 @@ private:
         htmlStream << "<h3>Warp Size</h3>" << std::endl;
         htmlStream << "<p>Warp Size: " << settingsStruct.warpSize << "</p>" << std::endl;
 
+        // Add a section for each memory region and its name
+        htmlStream << "<h1>Memory Regions</h1>" << std::endl;
 
-        // Add the section for the read logs
+        for (auto region : memoryRegions) {
+                htmlStream << "<h2>Region: " << std::get<3>(region) << "</h2>" << std::endl;
+                htmlStream << "<p>Start Address: " << std::get<0>(region) << " (End Address:) " << std::get<0>(region)+ std::get<1>(region) * std::get<2>(region) << "</p>" << std::endl;
+                htmlStream << "<p>Number of Elements: " << std::get<1>(region) << "</p>" << std::endl;
+                htmlStream << "<p>Size of Single Element: " << std::get<2>(region) << "</p>" << std::endl;
+        }
+
+        // Add the section for the memory access logs
         htmlStream << "<h2>Memory Accesses</h2>" << std::endl;
 
         // Add the table for the read logs
@@ -187,6 +198,25 @@ private:
         fetchedFromDevice = true;
     }
 
+    __device__ int getStorageIndex() {// Atomically increase the currentSize by 1
+        int current_index = atomicAdd(&d_constantData->currentSize, 1);
+
+        // First check if the currentSize is zero, if so we need to initialize the additional data variables, needed later to restore the data
+        if (current_index == 0) {
+            // Store the grid dimensions
+            d_constantData->gridDimX = gridDim.x;
+            d_constantData->gridDimY = gridDim.y;
+            d_constantData->gridDimZ = gridDim.z;
+            // Store the block dimensions
+            d_constantData->blockDimX = blockDim.x;
+            d_constantData->blockDimY = blockDim.y;
+            d_constantData->blockDimZ = blockDim.z;
+            // Store the warp size
+            d_constantData->warpSize = warpSize;
+        }
+        return current_index;
+    }
+
     CudaMemAccessStorage<T> *d_this;
 
 public:
@@ -228,7 +258,11 @@ public:
 
     }
 
-    __host__ void free() {
+    __host__ void registerArray(T *array, size_t size, std::string name = "") {
+        memoryRegions.push_back(std::make_tuple(array, size, sizeof(array[0]), name));
+    }
+
+    __host__ ~CudaMemAccessStorage() {
         // Free the memory on the device
         checkCudaError(cudaFree(d_memoryAccessLog), "Could not free memory access logs on device.");
         checkCudaError(cudaFree(d_constantData), "Could not free constant data on device.");
@@ -239,26 +273,7 @@ public:
         delete h_constantData;
     }
 
-    __device__ int getStorageIndex() {// Atomically increase the currentSize by 1
-        int current_index = atomicAdd(&d_constantData->currentSize, 1);
-
-        // First check if the currentSize is zero, if so we need to initialize the additional data variables, needed later to restore the data
-        if (current_index == 0) {
-            // Store the grid dimensions
-            d_constantData->gridDimX = gridDim.x;
-            d_constantData->gridDimY = gridDim.y;
-            d_constantData->gridDimZ = gridDim.z;
-            // Store the block dimensions
-            d_constantData->blockDimX = blockDim.x;
-            d_constantData->blockDimY = blockDim.y;
-            d_constantData->blockDimZ = blockDim.z;
-            // Store the warp size
-            d_constantData->warpSize = warpSize;
-        }
-        return current_index;
-    }
-
-    __host__ __device__ CudaMemAccessStorage<T> *getDevicePointer() const {
+    __host__ __device__ CudaMemAccessStorage<T> *getDevicePointer() {
         return d_this;
     }
 
@@ -439,7 +454,7 @@ public:
     }
 
     // Constructor which allocates the memory on the device
-    __host__ CudaMemAccessLogger(T *array_data, CudaMemAccessStorage<T> *storage = nullptr) {
+    __host__ CudaMemAccessLogger(T *array_data, size_t array_length, std::string description_name, CudaMemAccessStorage<T> *storage = nullptr) {
 
         // Store the passed data pointer within the class
         d_data = array_data;
@@ -457,6 +472,8 @@ public:
 
         // Also store the device pointer
         d_storage = h_storage->getDevicePointer();
+
+        h_storage->registerArray(array_data, array_length, description_name);
 
 
 
@@ -527,7 +544,7 @@ public:
         return d_this;
     }
 
-    CudaMemAccessStorage<T> getStorage() {
-        return *h_storage;
+    CudaMemAccessStorage<T>* getStorage() {
+        return h_storage;
     }
 };
