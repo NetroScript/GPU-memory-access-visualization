@@ -34,20 +34,22 @@ int main(){
 
     checkCudaError(cudaMemcpy(d_input, h_input.data(), sizeof(int)* prob_size, cudaMemcpyHostToDevice));
 
-    CudaMemAccessStorage<int> memAccessStorage(10000);
+    // The overloaded new operator generates a managed memory object
+    CudaMemAccessStorage<int>* memAccessStorage = new CudaMemAccessStorage<int>(10000);
 
-
-    CudaMemAccessLogger<int> input(d_input, prob_size, "Input Datastructure", &memAccessStorage);
-    CudaMemAccessLogger<int> output(d_output, prob_size, "Output Datastructure", &memAccessStorage);
+    // The overloaded new operator generates a managed memory object
+    CudaMemAccessLogger<int>* input = new CudaMemAccessLogger<int>(d_input, prob_size, "Input Datastructure", memAccessStorage);
+    CudaMemAccessLogger<int>* output = new CudaMemAccessLogger<int>(d_output, prob_size, "Output Datastructure", memAccessStorage);
 
     constexpr int threads = 32;
     constexpr int blocks = (prob_size/threads)+1;
 
-    kernel<<<blocks, threads>>>(prob_size, input.getDevicePointer(), output.getDevicePointer());
+    //kernel<<<blocks, threads>>>(prob_size, input.getDevicePointer(), output.getDevicePointer());
+    kernel << <blocks, threads >> > (prob_size, input, output);
     checkCudaError(cudaGetLastError());
     cudaDeviceSynchronize();
 
-    memAccessStorage.generateOutput("../../../html/template.json", "../../../out/basic.json", CudaMemAccessStorage<int>::parseDataForJSPage);
+    memAccessStorage->generateOutput("../../../html/template.json", "../../../out/basic.json", CudaMemAccessStorage<int>::parseDataForJSPage);
 
     checkCudaError(cudaMemcpy(h_output.data(), d_output, sizeof(int)*prob_size, cudaMemcpyDeviceToHost));
 
@@ -60,6 +62,11 @@ int main(){
 
     checkCudaError(cudaFree(d_input));
     checkCudaError(cudaFree(d_output));
+
+    // Free up the managed memory objects
+    delete memAccessStorage;
+    delete input;
+    delete output;
 
     std::cout << "kernel finished successful" << std::endl;
     return 0;
