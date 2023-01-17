@@ -1,11 +1,15 @@
 <script lang="ts">
-  import { drawerState } from "../lib/stores";
-  import { Drawer } from "@skeletonlabs/skeleton";
+  import { drawerState } from '../lib/stores';
+  import { Drawer } from '@skeletonlabs/skeleton';
 </script>
 
 <Drawer>
   <div class="mx-auto text-center text-2xl my-3">
-    Active Inspection: {$drawerState.currentMemoryRegion.name} ({$drawerState.showReadAccess ? "Read" : "Write"})
+    Active Inspection: {$drawerState.currentMemoryRegion.name} ({$drawerState.showSingleAccessTable
+      ? 'All'
+      : $drawerState.showReadAccess
+      ? 'Read'
+      : 'Write'})
   </div>
 
   {#if $drawerState.currentMemoryRegionIndex > -1}

@@ -13,7 +13,7 @@ export interface MemoryRegions {
 }
 
 // A Single Access describes the address, the blockID, the threadID and whether it is a read or write access (read = true)
-export type SingleAccess = [string, number, number, boolean]
+export type SingleAccess = [string, number, number, boolean];
 
 export interface Dimension {
   x: number;
@@ -29,7 +29,6 @@ export interface OutputJSON {
 }
 
 export class AccessInstance {
-
   readonly addressInteger: bigint;
   readonly address: string;
   readonly blockIdGlobal: number;
@@ -43,8 +42,13 @@ export class AccessInstance {
 
   public index: number;
 
-
-  constructor(address: string, threadId: number, blockId: number, isRead: boolean, kernelParameters: GenericInformation) {
+  constructor(
+    address: string,
+    threadId: number,
+    blockId: number,
+    isRead: boolean,
+    kernelParameters: GenericInformation
+  ) {
     this.address = address;
     this.blockIdGlobal = blockId;
     this.isRead = isRead;
@@ -53,19 +57,27 @@ export class AccessInstance {
 
     this.threadID = {
       x: this.threadIdGlobal % kernelParameters.GridDimensions.x,
-      y: Math.floor(this.threadIdGlobal / kernelParameters.GridDimensions.x) % kernelParameters.GridDimensions.y,
-      z: Math.floor(this.threadIdGlobal / (kernelParameters.GridDimensions.x * kernelParameters.GridDimensions.y))
+      y:
+        Math.floor(this.threadIdGlobal / kernelParameters.GridDimensions.x) %
+        kernelParameters.GridDimensions.y,
+      z: Math.floor(
+        this.threadIdGlobal /
+          (kernelParameters.GridDimensions.x * kernelParameters.GridDimensions.y)
+      )
     };
 
     this.blockID = {
       x: this.blockIdGlobal % kernelParameters.GridDimensions.x,
-      y: Math.floor(this.blockIdGlobal / kernelParameters.GridDimensions.x) % kernelParameters.GridDimensions.y,
-      z: Math.floor(this.blockIdGlobal / (kernelParameters.GridDimensions.x * kernelParameters.GridDimensions.y))
+      y:
+        Math.floor(this.blockIdGlobal / kernelParameters.GridDimensions.x) %
+        kernelParameters.GridDimensions.y,
+      z: Math.floor(
+        this.blockIdGlobal / (kernelParameters.GridDimensions.x * kernelParameters.GridDimensions.y)
+      )
     };
 
     this.kernelParameters = kernelParameters;
   }
-
 }
 
 interface MemoryRegionManagerDisplaySettings {
@@ -76,7 +88,6 @@ interface MemoryRegionManagerDisplaySettings {
 }
 
 export class MemoryRegionManager {
-
   readonly startAddress: string;
   readonly startAddressInteger: bigint;
   readonly endAddress: string;
@@ -87,20 +98,24 @@ export class MemoryRegionManager {
   readonly memoryAccesses: AccessInstance[] = [];
 
   // For each index of the array data structure, we store all accesses which read from this index
-  readonly readAccesses: Map<number, AccessInstance[]>
+  readonly readAccesses: Map<number, AccessInstance[]>;
   // For each index of the array data structure, we store all accesses which write to this index
-  readonly writeAccesses: Map<number, AccessInstance[]>
-
+  readonly writeAccesses: Map<number, AccessInstance[]>;
 
   // Store display Settings
-  displaySettings: MemoryRegionManagerDisplaySettings  = {width: -1, height: 0, isMultiDimensional: false, using1DSparseRepresentation: true};
+  displaySettings: MemoryRegionManagerDisplaySettings = {
+    width: -1,
+    height: 0,
+    isMultiDimensional: false,
+    using1DSparseRepresentation: true
+  };
 
   private lowestIndex: number = Number.MAX_SAFE_INTEGER;
   private highestIndex: number = Number.MIN_SAFE_INTEGER;
 
   // Store the maximum number of accesses in a single index to later represent it in a heatmap
-  private highestReadCount: number = 0;
-  private highestWriteCount: number = 0;
+  private highestReadCount = 0;
+  private highestWriteCount = 0;
 
   // For 1d arrays, we can display a sparse representation which only shows accessed addresses and not the entire memory space
   // if it is a normal number, it is the valid index of the array, if it is a tuple of numbers, this represents the empty spaces between memory accesses
@@ -181,77 +196,76 @@ export class MemoryRegionManager {
     }
   }
 
-
-  checkIfAddressIsInRegion(address: bigint) : boolean {
+  checkIfAddressIsInRegion(address: bigint): boolean {
     return address >= this.startAddressInteger && address < this.endAddressInteger;
   }
 
-  checkIfAddressStringIsInRegion(address: string) : boolean {
+  checkIfAddressStringIsInRegion(address: string): boolean {
     return this.checkIfAddressIsInRegion(BigInt(address));
   }
 
-  checkIfAccessIsInRegion(access: AccessInstance) : boolean {
+  checkIfAccessIsInRegion(access: AccessInstance): boolean {
     return this.checkIfAddressIsInRegion(access.addressInteger);
   }
 
-  convertAddressToIndex(address: bigint) : number {
-    return Number((address - this.startAddressInteger)/BigInt(this.sizeOfSingleElement));
+  convertAddressToIndex(address: bigint): number {
+    return Number((address - this.startAddressInteger) / BigInt(this.sizeOfSingleElement));
   }
 
-  convertAddressStringToIndex(address: string) : number {
+  convertAddressStringToIndex(address: string): number {
     return this.convertAddressToIndex(BigInt(address));
   }
 
-  convertAccessToIndex(access: AccessInstance) : number {
+  convertAccessToIndex(access: AccessInstance): number {
     return this.convertAddressToIndex(access.addressInteger);
   }
 
-  convertIndexToAddress(index: number) : bigint {
+  convertIndexToAddress(index: number): bigint {
     return this.startAddressInteger + BigInt(index * this.sizeOfSingleElement);
   }
 
   // Return a 0x hex string padded to a width of 64 bits (16 hex characters)
-  convertIndexToAddressString(index: number) : string {
-    return "0x" + this.convertIndexToAddress(index).toString(16).padStart(16, "0");
+  convertIndexToAddressString(index: number): string {
+    return '0x' + this.convertIndexToAddress(index).toString(16).padStart(16, '0');
   }
 
   // Getter for the read accesses of a specific index
-  getReadAccesses(index: number) : AccessInstance[] {
+  getReadAccesses(index: number): AccessInstance[] {
     return this.readAccesses.get(index) || [];
   }
 
   // Getter for the write accesses of a specific index
-  getWriteAccesses(index: number) : AccessInstance[]  {
+  getWriteAccesses(index: number): AccessInstance[] {
     return this.writeAccesses.get(index) || [];
   }
 
   // Getter for the read accesses of specific address
-  getReadAccessesOfAddress(address: bigint) : AccessInstance[]  {
+  getReadAccessesOfAddress(address: bigint): AccessInstance[] {
     return this.readAccesses.get(this.convertAddressToIndex(address)) || [];
   }
 
   // Getter for the write accesses of specific address
-  getWriteAccessesOfAddress(address: bigint) : AccessInstance[] {
+  getWriteAccessesOfAddress(address: bigint): AccessInstance[] {
     return this.writeAccesses.get(this.convertAddressToIndex(address)) || [];
   }
 
   // Getter for all accesses of a specific index
-  getAllAccesses(index: number) : AccessInstance[] {
+  getAllAccesses(index: number): AccessInstance[] {
     return [...(this.readAccesses.get(index) || []), ...(this.writeAccesses.get(index) || [])];
   }
 
   // Getter for all accesses of a specific address
-  getAllAccessesOfAddress(address: bigint) : AccessInstance[] {
+  getAllAccessesOfAddress(address: bigint): AccessInstance[] {
     return this.getAllAccesses(this.convertAddressToIndex(address));
   }
 
   // Getter for sparse 1d memory locations
-  getSparse1DMemoryLocations() : (number | [number, number])[] {
+  getSparse1DMemoryLocations(): (number | [number, number])[] {
     return this.sparse1DMemoryLocations;
   }
 
   // This function generates all static data after all memory accesses were added to the memory region
-  bake() : void {
+  bake(): void {
     // Right now this function just constructs the sparse representation of the memory region
 
     // Clear the sparse1DMemoryLocations array
@@ -266,17 +280,17 @@ export class MemoryRegionManager {
 
     // Now we can construct the sparse representation
     // For that we iterate in order over all indexes, and if there is a gap greater than 1, we add a sparse element
-    for (let i = 0; i < allIndexes.length; i++){
-      let index = allIndexes[i];
+    for (let i = 0; i < allIndexes.length; i++) {
+      const index = allIndexes[i];
       // Also store the next index if it exists
-      let nextIndex = allIndexes[i+1] || index;
+      const nextIndex = allIndexes[i + 1] || index;
 
       // Always add existing indexes
-      this.sparse1DMemoryLocations.push(index)
+      this.sparse1DMemoryLocations.push(index);
 
       // If the next index is greater than the current index by more than 1, we need to add a sparse element which represents the gap
       if (nextIndex > index + 1) {
-        this.sparse1DMemoryLocations.push([index + 1, nextIndex-1])
+        this.sparse1DMemoryLocations.push([index + 1, nextIndex - 1]);
       }
     }
   }

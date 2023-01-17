@@ -1,5 +1,5 @@
-import {writable} from 'svelte/store';
-import type { MemoryRegionManager } from "./types";
+import { writable } from 'svelte/store';
+import type { MemoryRegionManager } from './types';
 
 // Implement a store storing the state of the drawer information
 
@@ -7,11 +7,11 @@ export interface DrawerState {
   currentMemoryRegion: MemoryRegionManager;
   currentMemoryRegionIndex: number;
   showSingleAccessTable: boolean;
-  showReadAccess: boolean
+  showReadAccess: boolean;
 }
 
 function createDrawerStateStore() {
-  const {subscribe, set, update} = writable<DrawerState>({
+  const { subscribe, set, update } = writable<DrawerState>({
     currentMemoryRegion: null,
     currentMemoryRegionIndex: -1,
     showSingleAccessTable: false,
@@ -25,18 +25,22 @@ function createDrawerStateStore() {
     getCurrentData: () => {
       // Return a copy of the current data
       let currentData: DrawerState;
-      subscribe(value => currentData = value)();
+      subscribe((value) => (currentData = value))();
       // On the current data, we want to return a copy of the current memory region information
-      if(currentData.showSingleAccessTable) {
+      if (currentData.showSingleAccessTable) {
         return currentData.currentMemoryRegion.getAllAccesses(currentData.currentMemoryRegionIndex);
       }
       if (currentData.showReadAccess) {
-        return currentData.currentMemoryRegion.getReadAccesses(currentData.currentMemoryRegionIndex);
+        return currentData.currentMemoryRegion.getReadAccesses(
+          currentData.currentMemoryRegionIndex
+        );
       } else {
-        return currentData.currentMemoryRegion.getWriteAccesses(currentData.currentMemoryRegionIndex);
+        return currentData.currentMemoryRegion.getWriteAccesses(
+          currentData.currentMemoryRegionIndex
+        );
       }
-      }
-  }
+    }
+  };
 }
 
 export const drawerState = createDrawerStateStore();
