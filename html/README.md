@@ -90,6 +90,10 @@ This will currently create a `build` folder with an `index.html` file in it.
 
 All packages used in `package.json` are listed here with a short explanation (in alphabetical order).
 
+* `@iconify/icons-ic`
+  * Add the `icons-ic` icon set for offline use. A list of all available icons can be found [here](https://icon-sets.iconify.design/ic/).
+* `@iconify/svelte`
+  * Add a icon component of the `iconify` library which is usable in Svelte.
 * `@skeletonlabs/skeleton`
   * This is a UI framework which provides some pre-made components for svelte (like the drawer) and additionally dictates the default style, the official docs can be found [here](https://www.skeleton.dev/docs/why)
 * `@sveltejs/vite-plugin-svelte`
@@ -106,6 +110,8 @@ All packages used in `package.json` are listed here with a short explanation (in
   * Add ESLint (rule) support to TypeScript code.
 * `autoprefixer`
   * A PostCSS plugin to automatically add necessary browser prefixes to CSS, so that more browsers are supported.
+* `color2k`
+  * A compact library for color manipulations. (Interpolate between colors, make them more transparent, and be able to output this as a color for CSS)
 * `esbuild`
   * Used by Vite for minification and transpilation. (Also supports features like tree shaking)
 * `eslint`

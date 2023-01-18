@@ -57,23 +57,14 @@ export class AccessInstance {
 
     this.threadID = {
       x: this.threadIdGlobal % kernelParameters.GridDimensions.x,
-      y:
-        Math.floor(this.threadIdGlobal / kernelParameters.GridDimensions.x) %
-        kernelParameters.GridDimensions.y,
-      z: Math.floor(
-        this.threadIdGlobal /
-          (kernelParameters.GridDimensions.x * kernelParameters.GridDimensions.y)
-      )
+      y: Math.floor(this.threadIdGlobal / kernelParameters.GridDimensions.x) % kernelParameters.GridDimensions.y,
+      z: Math.floor(this.threadIdGlobal / (kernelParameters.GridDimensions.x * kernelParameters.GridDimensions.y))
     };
 
     this.blockID = {
       x: this.blockIdGlobal % kernelParameters.GridDimensions.x,
-      y:
-        Math.floor(this.blockIdGlobal / kernelParameters.GridDimensions.x) %
-        kernelParameters.GridDimensions.y,
-      z: Math.floor(
-        this.blockIdGlobal / (kernelParameters.GridDimensions.x * kernelParameters.GridDimensions.y)
-      )
+      y: Math.floor(this.blockIdGlobal / kernelParameters.GridDimensions.x) % kernelParameters.GridDimensions.y,
+      z: Math.floor(this.blockIdGlobal / (kernelParameters.GridDimensions.x * kernelParameters.GridDimensions.y))
     };
 
     this.kernelParameters = kernelParameters;
@@ -114,8 +105,22 @@ export class MemoryRegionManager {
   private highestIndex: number = Number.MIN_SAFE_INTEGER;
 
   // Store the maximum number of accesses in a single index to later represent it in a heatmap
-  private highestReadCount = 0;
-  private highestWriteCount = 0;
+  private _highestReadCount = 0;
+  private _highestWriteCount = 0;
+  private _highestTotalCount = 0;
+
+  // For ease of use to not use a method we are providing a getter for the highest counts
+  get highestReadCount() {
+    return this._highestReadCount;
+  }
+
+  get highestWriteCount() {
+    return this._highestWriteCount;
+  }
+
+  get highestTotalCount() {
+    return this._highestTotalCount;
+  }
 
   // For 1d arrays, we can display a sparse representation which only shows accessed addresses and not the entire memory space
   // if it is a normal number, it is the valid index of the array, if it is a tuple of numbers, this represents the empty spaces between memory accesses
@@ -172,8 +177,8 @@ export class MemoryRegionManager {
       this.readAccesses.get(access.index)?.push(access);
 
       // Check if the number of accesses at this index for reading is the highest so far
-      if (this.readAccesses.get(access.index)?.length > this.highestReadCount) {
-        this.highestReadCount = this.readAccesses.get(access.index)?.length || 0;
+      if (this.readAccesses.get(access.index)?.length > this._highestReadCount) {
+        this._highestReadCount = this.readAccesses.get(access.index)?.length || 0;
       }
     }
 
@@ -184,9 +189,16 @@ export class MemoryRegionManager {
       this.writeAccesses.get(access.index)?.push(access);
 
       // Check if the number of accesses at this index for writing is the highest so far
-      if (this.writeAccesses.get(access.index)?.length > this.highestWriteCount) {
-        this.highestWriteCount = this.writeAccesses.get(access.index)?.length || 0;
+      if (this.writeAccesses.get(access.index)?.length > this._highestWriteCount) {
+        this._highestWriteCount = this.writeAccesses.get(access.index)?.length || 0;
       }
+    }
+
+    if (this._highestReadCount > this._highestTotalCount) {
+      this._highestTotalCount = this._highestReadCount;
+    }
+    if (this._highestWriteCount > this._highestTotalCount) {
+      this._highestTotalCount = this._highestWriteCount;
     }
   }
 

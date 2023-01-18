@@ -10,6 +10,10 @@ export interface DrawerState {
   showReadAccess: boolean;
 }
 
+export interface PageState {
+  backGroundContrastBlack: boolean;
+}
+
 function createDrawerStateStore() {
   const { subscribe, set, update } = writable<DrawerState>({
     currentMemoryRegion: null,
@@ -31,16 +35,13 @@ function createDrawerStateStore() {
         return currentData.currentMemoryRegion.getAllAccesses(currentData.currentMemoryRegionIndex);
       }
       if (currentData.showReadAccess) {
-        return currentData.currentMemoryRegion.getReadAccesses(
-          currentData.currentMemoryRegionIndex
-        );
+        return currentData.currentMemoryRegion.getReadAccesses(currentData.currentMemoryRegionIndex);
       } else {
-        return currentData.currentMemoryRegion.getWriteAccesses(
-          currentData.currentMemoryRegionIndex
-        );
+        return currentData.currentMemoryRegion.getWriteAccesses(currentData.currentMemoryRegionIndex);
       }
     }
   };
 }
 
 export const drawerState = createDrawerStateStore();
+export const pageState = writable<PageState>({ backGroundContrastBlack: true });

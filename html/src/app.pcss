@@ -6,3 +6,16 @@
 html, body { @apply h-full overflow-hidden; }
 
 
+html:root {
+    --read-accesses: 0 72 255;
+    --write-accesses: 255 113 0;
+    --all-accesses: 61 9 218;
+}
+
+.high-contrast-stroke {
+    -webkit-text-stroke: medium black;
+}
+
+.high-contrast-text-shadow {
+    text-shadow: 0px 0px 1px black;
+}

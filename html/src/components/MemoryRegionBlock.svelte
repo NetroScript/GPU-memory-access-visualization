@@ -2,6 +2,7 @@
   import { drawerState } from '../lib/stores';
   import { MemoryRegionManager } from '../lib/types';
   import { drawerStore } from '@skeletonlabs/skeleton';
+  import { pageState } from '../lib/stores';
 
   export let MemoryRegion: MemoryRegionManager;
   export let index: number;
@@ -11,23 +12,37 @@
   let writeCount = 0;
   let totalCount = 0;
 
+  let readOpacity = 0;
+  let writeOpacity = 0;
+  let totalOpacity = 0;
+
   $: {
     readCount = MemoryRegion.getReadAccesses(index).length;
     writeCount = MemoryRegion.getWriteAccesses(index).length;
     totalCount = readCount + writeCount;
 
+    // If the maximum is 0, we are dividing by 0, so we set the opacity to 0 in the case of NaN
+    readOpacity = readCount / MemoryRegion.highestReadCount || 0;
+    writeOpacity = writeCount / MemoryRegion.highestWriteCount || 0;
+    totalOpacity = totalCount / MemoryRegion.highestTotalCount || 0;
+
     originalMemoryAddress = MemoryRegion.convertIndexToAddressString(index);
   }
 </script>
 
-<div class="flex bg-cyan-700 m-0 w-56">
-  <div class="bg-cyan-400 p-4 flex-1">
+<div
+  class="flex m-0"
+  class:bg-black={$pageState.backGroundContrastBlack}
+  class:bg-white={!$pageState.backGroundContrastBlack}
+>
+  <div class="py-1 flex-1 m-auto high-contrast-stroke font-black">
     {index}
   </div>
-  <div class="flex flex-col flex-1 bg-cyan-800">
+  <div class="flex flex-col flex-1" class:text-black={!$pageState.backGroundContrastBlack}>
     {#if $drawerState.showSingleAccessTable}
       <div
-        class="flex-1 bg-cyan-600"
+        class="flex-1 flex justify-center items-center bg-access-all high-contrast-text-shadow"
+        style="--tw-bg-opacity: {totalOpacity}"
         on:click={() => {
           drawerStore.open({
             position: 'bottom'
@@ -37,11 +52,12 @@
           $drawerState.currentMemoryRegionIndex = index;
         }}
       >
-        {totalCount}
+        <div>{totalCount}</div>
       </div>
     {:else}
       <div
-        class="flex-1 bg-cyan-600"
+        class="flex-1 bg-access-read high-contrast-text-shadow"
+        style="--tw-bg-opacity: {readOpacity}"
         on:click={() => {
           drawerStore.open({
             position: 'bottom'
@@ -55,7 +71,8 @@
         {readCount}
       </div>
       <div
-        class="flex-1 bg-orange-700"
+        class="flex-1 bg-access-write high-contrast-text-shadow"
+        style="--tw-bg-opacity: {writeOpacity}"
         on:click={() => {
           drawerStore.open({
             position: 'bottom'
