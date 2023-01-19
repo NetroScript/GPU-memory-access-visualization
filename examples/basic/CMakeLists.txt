@@ -22,3 +22,13 @@ target_sources(${_TARGET_ANNOTATED}
 set_target_properties(${_TARGET_ANNOTATED} PROPERTIES
   CUDA_CXX_STANDARD 17
 )
+
+set(_TARGET_RANDOM_2D_MATRIX random2dMatrix)
+
+add_executable(${_TARGET_RANDOM_2D_MATRIX})
+target_sources(${_TARGET_RANDOM_2D_MATRIX}
+   PRIVATE
+   random2dMatrix.cu)
+set_target_properties(${_TARGET_RANDOM_2D_MATRIX} PROPERTIES
+  CUDA_CXX_STANDARD 17
+)
