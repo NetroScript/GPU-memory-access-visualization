@@ -32,3 +32,14 @@ target_sources(${_TARGET_RANDOM_2D_MATRIX}
 set_target_properties(${_TARGET_RANDOM_2D_MATRIX} PROPERTIES
   CUDA_CXX_STANDARD 17
 )
+
+set(_TARGET_REDUCE reduce)
+
+add_executable(${_TARGET_REDUCE})
+target_sources(${_TARGET_REDUCE}
+   PRIVATE
+   reduce.cu)
+set_target_properties(${_TARGET_REDUCE} PROPERTIES
+  CXX_STANDARD 17
+  CUDA_CXX_STANDARD 17
+)
