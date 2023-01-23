@@ -23,6 +23,7 @@ inline void checkCudaErrorFunc(cudaError_t err, const char *file, int line)
 // Each local block is reduced to a single element.
 // A grid stride loop maps the logical blocks to cuda blocks (both has the same size).
 // The output array has the size of the number of logical blocks.
+// Uses only global memory.
 __global__ void reduce_gm(unsigned int const size, unsigned int *const input, unsigned int *const output)
 {
     int const id = threadIdx.x + blockIdx.x * blockDim.x;
@@ -48,7 +49,49 @@ __global__ void reduce_gm(unsigned int const size, unsigned int *const input, un
     }
 }
 
-// Helper function -> should be replaced by html visualization ;-) 
+// The reduction algorithms divide all elements in logical blocks with the size of threads.
+// Each local block is reduced to a single element.
+// A grid stride loop maps the logical blocks to cuda blocks (both has the same size).
+// The output array has the size of the number of logical blocks.
+// Uses shared memory to speed up.
+template <auto LOGICAL_BLOCK_SIZE>
+__global__ void reduce_sm(unsigned int const size, unsigned int const upper_bound_size, unsigned int *const input, unsigned int *const output)
+{
+    __shared__ unsigned int reduction_memory[LOGICAL_BLOCK_SIZE];
+
+    int const id = threadIdx.x + blockIdx.x * blockDim.x;
+    int const stride = blockDim.x * gridDim.x;
+    // use grid stride loop to distribute the logical blocks to cuda blocks.
+    for (int block_offset_id = id, virtual_block_id = blockIdx.x; block_offset_id < upper_bound_size; block_offset_id += stride, virtual_block_id += gridDim.x)
+    {
+        if (block_offset_id < size)
+        {
+            reduction_memory[threadIdx.x] = input[block_offset_id];
+        }
+        else
+        {
+            reduction_memory[threadIdx.x] = 0;
+        }
+        // reduce all elements of logical block to a single element.
+        __syncthreads();
+        for (int max_threads_blocks = blockDim.x / 2; max_threads_blocks > 0; max_threads_blocks /= 2)
+        {
+            if (threadIdx.x < max_threads_blocks)
+            {
+                reduction_memory[threadIdx.x] += reduction_memory[threadIdx.x + max_threads_blocks];
+            }
+            __syncthreads();
+        }
+
+        if (threadIdx.x == 0)
+        {
+            // write single element to output
+            output[virtual_block_id] = reduction_memory[0];
+        }
+    }
+}
+
+// Helper function -> should be replaced by html visualization ;-)
 template <typename T>
 void print_vec(std::vector<T> vec)
 {
@@ -61,16 +104,16 @@ void print_vec(std::vector<T> vec)
 
 int main(int argc, char **argv)
 {
-    int const blocks = 10;
-    int const threads = 32;
+    int constexpr blocks = 10;
+    int constexpr threads = 32;
 
     // number of input elements
-    unsigned int const size = 1000;
+    unsigned int const size = 1632;
     size_t const data_size_byte = sizeof(unsigned int) * size;
 
     // number of logical blocks
     size_t output_elements = size / threads;
-    // add an extra element, if logical blocks does not fit in cuda blocks 
+    // add an extra element, if logical blocks does not fit in cuda blocks
     output_elements += (size % threads == 0) ? 0 : 1;
     size_t const output_size_byte = sizeof(unsigned int) * output_elements;
 
@@ -98,7 +141,22 @@ int main(int argc, char **argv)
     checkCudaError(cudaMalloc((void **)&d_output, output_size_byte));
     checkCudaError(cudaMemcpy(d_data, h_data.data(), data_size_byte, cudaMemcpyHostToDevice));
 
-    reduce_gm<<<blocks, threads>>>(size, d_data, d_output);
+    bool const sm_version = false;
+
+    if (!sm_version)
+    {
+        if (size % threads)
+        {
+            std::cerr << "size needs to be multiple of number of threads" << std::endl;
+            exit(1);
+        }
+        reduce_gm<<<blocks, threads>>>(size, d_data, d_output);
+    }
+    else
+    {
+        size_t const upper_bound_size = output_elements * threads;
+        reduce_sm<threads><<<blocks, threads>>>(size, upper_bound_size, d_data, d_output);
+    }
     checkCudaError(cudaGetLastError());
 
     checkCudaError(cudaMemcpy(h_output.data(), d_output, output_size_byte, cudaMemcpyDeviceToHost));
@@ -106,7 +164,7 @@ int main(int argc, char **argv)
     unsigned int sum = 0;
 
     // Reduce all sums of the logical blocks on CPU.
-    // Otherwise a second kernel or cuda cooperative groups are required to performe block synchronization.   
+    // Otherwise a second kernel or cuda cooperative groups are required to performe block synchronization.
     for (unsigned int const v : h_output)
     {
         sum += v;
