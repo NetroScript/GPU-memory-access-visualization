@@ -23,7 +23,7 @@
   // Additionally this leaves us an easy entry point which will not get simplified away (which normally a comment might be)
 
   // But actually for development mode load in a file
-  const MemoryData: OutputJSON = JSON.parse(import.meta.env.DEV ? dummyData : `//JS_TEMPLATE`);
+  const MemoryData: OutputJSON = JSON.parse(import.meta.env.DEV ? dummyData : `// JS_TEMPLATE`);
 
   const info = MemoryData.GlobalSettings;
 

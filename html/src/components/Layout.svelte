@@ -1,5 +1,5 @@
 <script>
-  import '@skeletonlabs/skeleton/themes/theme-skeleton.css';
+  import '../theme.pcss';
   import '@skeletonlabs/skeleton/styles/all.css';
   import '../app.pcss';
   import { AppShell, AppBar, Drawer, tooltip } from '@skeletonlabs/skeleton';
@@ -7,6 +7,8 @@
   import baselineLightbulb from '@iconify/icons-ic/baseline-lightbulb';
   import outlineSplitscreen from '@iconify/icons-ic/outline-splitscreen';
   import outlineRectangle from '@iconify/icons-ic/outline-rectangle';
+  import baselineMenu from '@iconify/icons-ic/baseline-menu';
+  import baselineFormatListNumbered from '@iconify/icons-ic/baseline-format-list-numbered';
   import { pageState, drawerState } from '../lib/stores';
 </script>
 
@@ -20,6 +22,21 @@
         <strong class="px-3">v1.0.0</strong>
       </svelte:fragment>
       <svelte:fragment slot="trail">
+        <div
+          class="cursor-pointer"
+          on:click={() => ($pageState.showIndex = !$pageState.showIndex)}
+          use:tooltip={{
+            content: 'Toggle between showing the index of the memory',
+            position: 'bottom'
+          }}
+        >
+          <Icon
+            class="drop-shadow-xl"
+            height="32"
+            icon={$pageState.showIndex ? baselineMenu : baselineFormatListNumbered}
+            width="32"
+          />
+        </div>
         <div
           class="cursor-pointer"
           on:click={() => ($drawerState.showSingleAccessTable = !$drawerState.showSingleAccessTable)}
@@ -42,7 +59,7 @@
         >
           <Icon
             class="drop-shadow-xl"
-            color={$pageState.backGroundContrastBlack ? 'black' : 'white'}
+            color={!$pageState.backGroundContrastBlack ? 'black' : 'white'}
             height="32"
             icon={baselineLightbulb}
             width="32"

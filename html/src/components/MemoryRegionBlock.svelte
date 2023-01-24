@@ -1,8 +1,9 @@
 <script lang="ts">
   import { drawerState } from '../lib/stores';
   import { MemoryRegionManager } from '../lib/types';
-  import { drawerStore } from '@skeletonlabs/skeleton';
+  import { drawerStore, tooltip } from '@skeletonlabs/skeleton';
   import { pageState } from '../lib/stores';
+  import type { ArgsTooltip } from '@skeletonlabs/skeleton/utilities/Tooltip/tooltip';
 
   export let MemoryRegion: MemoryRegionManager;
   export let index: number;
@@ -30,15 +31,13 @@
   }
 </script>
 
-<div
-  class="flex m-0"
-  class:bg-black={$pageState.backGroundContrastBlack}
-  class:bg-white={!$pageState.backGroundContrastBlack}
->
-  <div class="py-1 flex-1 m-auto high-contrast-stroke font-black">
-    {index}
-  </div>
-  <div class="flex flex-col flex-1" class:text-black={!$pageState.backGroundContrastBlack}>
+<div class="flex m-0 border-gray-600 border-[1px] cell-container">
+  {#if $pageState.showIndex}
+    <div class="py-1 flex-1 m-auto high-contrast-stroke font-black index-cell">
+      {index}
+    </div>
+  {/if}
+  <div class="flex flex-col flex-1" title={'Index: ' + index}>
     {#if $drawerState.showSingleAccessTable}
       <div
         class="flex-1 flex justify-center items-center bg-access-all high-contrast-text-shadow"
@@ -56,7 +55,7 @@
       </div>
     {:else}
       <div
-        class="flex-1 bg-access-read high-contrast-text-shadow"
+        class="flex-1 bg-access-read high-contrast-text-shadow content-cell"
         style="--tw-bg-opacity: {readOpacity}"
         on:click={() => {
           drawerStore.open({
@@ -71,7 +70,7 @@
         {readCount}
       </div>
       <div
-        class="flex-1 bg-access-write high-contrast-text-shadow"
+        class="flex-1 bg-access-write high-contrast-text-shadow content-cell"
         style="--tw-bg-opacity: {writeOpacity}"
         on:click={() => {
           drawerStore.open({
@@ -88,3 +87,19 @@
     {/if}
   </div>
 </div>
+
+<style>
+  .index-cell {
+    border-right: 2px solid gray;
+    min-width: var(--cell-index-width);
+  }
+
+  .content-cell {
+    min-width: var(--cell-content-width);
+    color: var(--cell-text-color);
+  }
+
+  .cell-container {
+    background-color: var(--cell-background-color);
+  }
+</style>
