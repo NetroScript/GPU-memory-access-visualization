@@ -13,11 +13,16 @@ export interface DrawerState {
 export interface PageState {
   backGroundContrastBlack: boolean;
   showIndex: boolean;
-  activeMemoryRegion?: MemoryRegionManager;
   availableMemoryRegions: MemoryRegionManager[];
   showGrid: boolean;
   customMemoryWidth: number;
 }
+
+export const ListPlaceHolder = {
+  // eslint-disable-next-line no-prototype-builtins,@typescript-eslint/ban-types
+  includes: (object: {}) => object.hasOwnProperty('isPlaceHolder'),
+  isPlaceHolder: true
+};
 
 function createDrawerStateStore() {
   const { subscribe, set, update } = writable<DrawerState>({
@@ -57,4 +62,4 @@ export const pageState = writable<PageState>({
   customMemoryWidth: 0
 });
 
-export const currentMemoryRegion = writable<MemoryRegionManager>(null);
+export const currentMemoryRegion = writable<MemoryRegionManager | typeof ListPlaceHolder>(ListPlaceHolder);

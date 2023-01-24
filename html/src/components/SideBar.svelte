@@ -1,6 +1,6 @@
 <script lang="ts">
   import { pageState } from '../lib/stores';
-  import { currentMemoryRegion } from '../lib/stores.js';
+  import { currentMemoryRegion, ListPlaceHolder } from '../lib/stores';
   import { ListBox, ListBoxItem } from '@skeletonlabs/skeleton';
 </script>
 
@@ -9,6 +9,7 @@
     <p class="my-1">Select the data structure you want to view:</p>
 
     <ListBox selected={currentMemoryRegion} class="my-1 border-gray-600/20 border-2 rounded-3xl">
+      <ListBoxItem value={ListPlaceHolder} class="mb-2">None</ListBoxItem>
       {#each $pageState.availableMemoryRegions as region, index}
         <ListBoxItem value={region} class="mb-2">{region.name}</ListBoxItem>
       {/each}

@@ -311,7 +311,6 @@ export class MemoryRegionManager {
   // This is because we use a list to be able to select the memory regions in the GUI
   // But this GUI element calls includes on the object for some reason
   includes(object: MemoryRegionManager): boolean {
-    console.log(object);
     return object === this;
   }
 }
