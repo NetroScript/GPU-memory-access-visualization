@@ -306,4 +306,12 @@ export class MemoryRegionManager {
       }
     }
   }
+
+  // To monkey patch a method which is called from the GUI (in SideBar in ListBox) we add a includes function
+  // This is because we use a list to be able to select the memory regions in the GUI
+  // But this GUI element calls includes on the object for some reason
+  includes(object: MemoryRegionManager): boolean {
+    console.log(object);
+    return object === this;
+  }
 }

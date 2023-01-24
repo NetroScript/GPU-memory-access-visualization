@@ -33,14 +33,14 @@
 
 <div class="flex m-0 border-gray-600 border-[1px] cell-container">
   {#if $pageState.showIndex}
-    <div class="py-1 flex-1 m-auto high-contrast-stroke font-black index-cell">
+    <div class="py-1 flex-1 m-auto high-contrast-stroke font-black text-white index-cell">
       {index}
     </div>
   {/if}
   <div class="flex flex-col flex-1" title={'Index: ' + index}>
     {#if $drawerState.showSingleAccessTable}
       <div
-        class="flex-1 flex justify-center items-center bg-access-all high-contrast-text-shadow"
+        class="flex-1 flex justify-center items-center bg-access-all high-contrast-text-shadow content-cell"
         style="--tw-bg-opacity: {totalOpacity}"
         on:click={() => {
           drawerStore.open({

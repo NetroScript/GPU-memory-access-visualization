@@ -16,6 +16,8 @@
   import { dummyData } from './lib/loadDummyData';
   import InspectDrawer from './components/InspectDrawer.svelte';
   import VisualizeMemoryRegion from './components/VisualizeMemoryRegion.svelte';
+  import { pageState } from './lib/stores';
+  import { currentMemoryRegion } from './lib/stores';
 
   // Load the general data
   // We actually do a JSON.parse here, as it is faster using the JSON parser than for the browser to evaluate an existing JSON object in JavaScript
@@ -49,13 +51,19 @@
   memoryRegions.forEach((region) => {
     region.bake();
   });
+
+  $pageState.availableMemoryRegions = memoryRegions;
 </script>
 
 <Layout>
-  <div class="container h-full mx-auto flex justify-center items-center flex flex-row">
-    {#each memoryRegions as memoryRegion}
-      <VisualizeMemoryRegion MemoryRegion={memoryRegion} />
-    {/each}
+  <div class="h-full mx-auto flex flex-row">
+    {#if $currentMemoryRegion != null}
+      <VisualizeMemoryRegion MemoryRegion={$currentMemoryRegion} />
+    {:else}
+      <div class="flex flex-col justify-center items-center w-full h-full">
+        <h1 class="text-3xl font-bold opacity-30 ">Please select a memory region</h1>
+      </div>
+    {/if}
   </div>
 
   <InspectDrawer />

@@ -13,10 +13,5 @@ module.exports = {
 			}
 		},
 	},
-	plugins: [require('@tailwindcss/forms'),require('@tailwindcss/typography'),require('@tailwindcss/line-clamp'),require('@skeletonlabs/skeleton/tailwind/skeleton.cjs')],
-	safelist: [
-		'bg-black',
-		'bg-white',
-		'text-black',
-	]
+	plugins: [require('@tailwindcss/forms'),require('@tailwindcss/typography'),require('@tailwindcss/line-clamp'),...require('@skeletonlabs/skeleton/tailwind/skeleton.cjs')()]
 }

@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { derived, writable } from 'svelte/store';
 import type { MemoryRegionManager } from './types';
 
 // Implement a store storing the state of the drawer information
@@ -12,6 +12,11 @@ export interface DrawerState {
 
 export interface PageState {
   backGroundContrastBlack: boolean;
+  showIndex: boolean;
+  activeMemoryRegion?: MemoryRegionManager;
+  availableMemoryRegions: MemoryRegionManager[];
+  showGrid: boolean;
+  customMemoryWidth: number;
 }
 
 function createDrawerStateStore() {
@@ -44,4 +49,12 @@ function createDrawerStateStore() {
 }
 
 export const drawerState = createDrawerStateStore();
-export const pageState = writable<PageState>({ backGroundContrastBlack: true });
+export const pageState = writable<PageState>({
+  backGroundContrastBlack: true,
+  showIndex: false,
+  availableMemoryRegions: [],
+  showGrid: true,
+  customMemoryWidth: 0
+});
+
+export const currentMemoryRegion = writable<MemoryRegionManager>(null);

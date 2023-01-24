@@ -14,9 +14,8 @@
   let highestValueWidth = MemoryRegion.highestTotalCount.toString().length + 1.5 + 'ch';
 
   $: {
-    if (MemoryRegion.displaySettings.using1DSparseRepresentation) {
+    if ($pageState.showGrid == false || $pageState.customMemoryWidth == 0) {
       addressObject = MemoryRegion.getSparse1DMemoryLocations();
-      console.log(addressObject);
     } else {
       addressObject = { length: MemoryRegion.getHighestIndex() + 1 };
     }
@@ -28,26 +27,36 @@
     {MemoryRegion.name}
   </div>
   <div
-    class="screen-grid w-full"
+    class="w-full"
+    class:screen-grid={$pageState.showGrid && $pageState.customMemoryWidth <= 0}
+    class:custom-grid={$pageState.showGrid && $pageState.customMemoryWidth > 0}
     style={'--cell-index-width: ' +
       highestIndexWidth +
       '; --cell-content-width: ' +
       highestValueWidth +
+      '; --cell-inbetween-width: ' +
+      ($pageState.showIndex
+        ? MemoryRegion.getHighestIndex().toString().length + MemoryRegion.highestTotalCount.toString().length + 2.2
+        : MemoryRegion.highestTotalCount.toString().length + 1.15) +
+      'ch' +
       '; --cell-background-color: ' +
       ($pageState.backGroundContrastBlack ? 'black' : 'white') +
       '; --cell-text-color: ' +
-      ($pageState.backGroundContrastBlack ? 'white;' : 'black;')}
+      ($pageState.backGroundContrastBlack ? 'white' : 'black') +
+      '; --grid-width: ' +
+      $pageState.customMemoryWidth +
+      ';'}
   >
     {#each addressObject as address, index}
       <!-- Check if the address is a valid object, if not we are not using a sparse array but show every element instead, so we need to use the index -->
-      {#if address == undefined}
+      {#if address === undefined}
         <MemoryRegionBlock {MemoryRegion} {index} />
       {:else}
         <!-- Now check if we have a number or an array, if we have a number, this is our index, if it is an array, we actually have items left out and just symbolize that with three dots -->
         {#if typeof address == 'number'}
           <MemoryRegionBlock {MemoryRegion} index={address} />
         {:else}
-          <div>...</div>
+          <div class="text-center text-xl inbetween-step my-auto">...</div>
         {/if}
       {/if}
     {/each}
@@ -59,8 +68,10 @@
     --minimum-grid-width: 60px;
     --cell-index-width: 32px;
     --cell-content-width: 32px;
+    --cell-inbetween-width: 32px;
     --cell-background-color: black;
     --cell-text-color: white;
+    --grid-width: 10;
   }
 
   .screen-grid {
@@ -70,5 +81,16 @@
     align-content: center;
     flex-direction: row;
     gap: 4px 0px;
+  }
+
+  .custom-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--grid-width), 1fr);
+    grid-gap: 0px 0px;
+  }
+
+  .inbetween-step {
+    transform: translate(0px, -5px);
+    min-width: var(--cell-inbetween-width);
   }
 </style>
