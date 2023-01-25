@@ -2,6 +2,8 @@ export interface GenericInformation {
   GridDimensions: Dimension;
   BlockDimensions: Dimension;
   WarpSize: number;
+  OriginalSize: number;
+  CurrentSize: number;
 }
 
 export interface MemoryRegions {
@@ -93,6 +95,8 @@ export class MemoryRegionManager {
   // For each index of the array data structure, we store all accesses which write to this index
   readonly writeAccesses: Map<number, AccessInstance[]>;
 
+  readonly kernelSettings: GenericInformation;
+
   // Store display Settings
   displaySettings: MemoryRegionManagerDisplaySettings = {
     width: -1,
@@ -122,6 +126,18 @@ export class MemoryRegionManager {
     return this._highestTotalCount;
   }
 
+  // Also store how many reads and writes there are in total
+  private _totalReads = 0;
+  private _totalWrites = 0;
+
+  get totalReads(): number {
+    return this._totalReads;
+  }
+
+  get totalWrites(): number {
+    return this._totalWrites;
+  }
+
   // For 1d arrays, we can display a sparse representation which only shows accessed addresses and not the entire memory space
   // if it is a normal number, it is the valid index of the array, if it is a tuple of numbers, this represents the empty spaces between memory accesses
   private sparse1DMemoryLocations: (number | [number, number])[] = [];
@@ -141,7 +157,7 @@ export class MemoryRegionManager {
     return this.highestIndex;
   }
 
-  constructor(memoryRegion: MemoryRegions) {
+  constructor(memoryRegion: MemoryRegions, kernelSettings: GenericInformation) {
     this.startAddress = memoryRegion.StartAddress;
     this.startAddressInteger = BigInt(this.startAddress);
     this.endAddress = memoryRegion.EndAddress;
@@ -152,6 +168,8 @@ export class MemoryRegionManager {
 
     this.readAccesses = new Map<number, AccessInstance[]>();
     this.writeAccesses = new Map<number, AccessInstance[]>();
+
+    this.kernelSettings = kernelSettings;
   }
 
   addMemoryAccess(access: AccessInstance) {
@@ -171,6 +189,7 @@ export class MemoryRegionManager {
 
     // Store the access in the read or write map and create the array if it does not exist
     if (access.isRead) {
+      this._totalReads++;
       if (!this.readAccesses.has(access.index)) {
         this.readAccesses.set(access.index, []);
       }
@@ -183,6 +202,7 @@ export class MemoryRegionManager {
     }
 
     if (!access.isRead) {
+      this._totalWrites++;
       if (!this.writeAccesses.has(access.index)) {
         this.writeAccesses.set(access.index, []);
       }

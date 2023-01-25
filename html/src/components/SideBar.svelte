@@ -2,6 +2,7 @@
   import { pageState } from '../lib/stores';
   import { currentMemoryRegion, ListPlaceHolder } from '../lib/stores';
   import { ListBox, ListBoxItem } from '@skeletonlabs/skeleton';
+  import ShowGenericInformation from './ShowGenericInformation.svelte';
 </script>
 
 <div class="sidebar flex flex-col h-full overflow-y-hidden">
@@ -17,6 +18,7 @@
   </div>
 
   <div class="flex-1" />
+  <ShowGenericInformation />
   <div class="mt-auto my-1 py-2">
     Optionally, set a width of the Memory Region, if you have a specific 2D layout you want to visualize.
   </div>

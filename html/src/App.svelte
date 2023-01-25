@@ -29,7 +29,9 @@
     );
 
     // Generate MemoryRegionManagers
-    const memoryRegions: MemoryRegionManager[] = json.MemoryRegions.map((region) => new MemoryRegionManager(region));
+    const memoryRegions: MemoryRegionManager[] = json.MemoryRegions.map(
+      (region) => new MemoryRegionManager(region, info)
+    );
 
     // Store all our memory accesses in the memoryRegions
     // This is relatively slow as we need to iterate over all memory accesses and then again over all memory regions, maybe this can be optimized, but the number of memory Regions should be low, so this should not be a problem
