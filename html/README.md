@@ -29,7 +29,16 @@ But first how to use and install the project.
 
 ## Using the project
 
-To use the project, you don't need to do anything else. There should be a pre-built HTML file ready for you to use. You can use this file as a template for the C++ header (when using the `parseDataForJSPage` generator).
+To use the project, you don't need to do anything else. There should be a pre-built HTML file ready for you to use.
+
+To then make use of that file the suggested way is to generate static `.json` data files with the C++ header using any of the available methods for JSON. And then opening the HTML file and dragging and dropping the `.json` into the dedicated area. This method has the fastest loading speed, as then the browser can directly read in the file and parse it with a JSON parser instead of using a more generic (and slower) parser.
+
+After loading the data either way, you can now select on the left side any loaded in data structure for viewing. You can select them and then get a visualization of them in the center of the screen. 
+On the top bar you have multiple utilities which allow you to toggle the behavior of the visualization (should the memory be display linearly / in a grid, should the index be visible or just the pure data, should read / write been shown individually or combined).
+When showing both read and write accesses, the read accesses are on top (blue), write ones on bottom (orange). You are also able to click them to view more information.
+
+But you can also generate a single static file containing one dataset with the same template. This will load (considerably) slower, but is functionally the same, and then you only have a single file. To do this, you can use the `parseDataForJSPage` generator of the C++ header file and passing the base HTML file in as input.
+
 
 If you need to rebuild or make changes to the project, you will have to install the dependencies and then run the described commands.
 
