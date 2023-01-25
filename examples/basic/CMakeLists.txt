@@ -18,13 +18,24 @@ endif()
 # add include path to the cuda_mav.cuh header
 target_link_libraries(${_TARGET_NORMAL} PRIVATE CUDA_MAV_HEADER)
 
-set(_TARGET_ANNOTATED annotated)
+set(_TARGET_RANDOM_2D_MATRIX random2dMatrix)
 
-add_executable(${_TARGET_ANNOTATED})
-target_sources(${_TARGET_ANNOTATED}
+add_executable(${_TARGET_RANDOM_2D_MATRIX})
+target_sources(${_TARGET_RANDOM_2D_MATRIX}
    PRIVATE
-   annotated.cu)
-set_target_properties(${_TARGET_ANNOTATED} PROPERTIES
+   random2dMatrix.cu)
+set_target_properties(${_TARGET_RANDOM_2D_MATRIX} PROPERTIES
+  CUDA_CXX_STANDARD 17
+)
+
+set(_TARGET_REDUCE reduce)
+
+add_executable(${_TARGET_REDUCE})
+target_sources(${_TARGET_REDUCE}
+   PRIVATE
+   reduce.cu)
+set_target_properties(${_TARGET_REDUCE} PROPERTIES
+  CXX_STANDARD 17
   CUDA_CXX_STANDARD 17
 )
 if(ENABLE_CUDA_DEVICE_DEBUG)
