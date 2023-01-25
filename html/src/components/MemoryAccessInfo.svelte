@@ -17,23 +17,23 @@
           <div class="description-container">
             <div class="description-prefix">X:</div>
             <div class="description-content">
-              {access.blockID.x}
+              {access.threadID.x}
             </div>
           </div>
           <div class="description-container">
             <div class="description-prefix">Y:</div>
             <div class="description-content">
-              {access.blockID.y}
+              {access.threadID.y}
             </div>
           </div>
           <div class="description-container">
             <div class="description-prefix">Z:</div>
             <div class="description-content">
-              {access.blockID.z}
+              {access.threadID.z}
             </div>
           </div>
           <div class="description-container pl-2">
-            <div class="description-prefix">Global:</div>
+            <div class="description-prefix">1D Local:</div>
             <div class="description-content">
               {access.threadIdGlobal}
             </div>
@@ -62,7 +62,7 @@
             </div>
           </div>
           <div class="description-container pl-2">
-            <div class="description-prefix">Global:</div>
+            <div class="description-prefix">1D Local:</div>
             <div class="description-content">
               {access.blockIdGlobal}
             </div>

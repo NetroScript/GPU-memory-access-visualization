@@ -42,29 +42,6 @@
     </div>
     <div class="flex flex-row justify-around items-center flex-wrap my-2">
       <div class="section-container flex-1 max-w-xl !variant-glass-secondary mx-3">
-        <div class="text-center font-mono">Grid Sizing:</div>
-        <div class="flex flex-row justify-around">
-          <div class="description-container mx-3">
-            <div class="description-prefix">X:</div>
-            <div class="description-content">
-              {$drawerState.currentMemoryRegion.kernelSettings.GridDimensions.x}
-            </div>
-          </div>
-          <div class="description-container mx-3">
-            <div class="description-prefix">Y:</div>
-            <div class="description-content">
-              {$drawerState.currentMemoryRegion.kernelSettings.GridDimensions.y}
-            </div>
-          </div>
-          <div class="description-container mx-3">
-            <div class="description-prefix">Z:</div>
-            <div class="description-content">
-              {$drawerState.currentMemoryRegion.kernelSettings.GridDimensions.z}
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="section-container flex-1 max-w-xl !variant-glass-secondary mx-3">
         <div class="text-center font-mono">Block Sizing:</div>
         <div class="flex flex-row justify-around">
           <div class="description-container mx-3">
@@ -83,6 +60,29 @@
             <div class="description-prefix">Z:</div>
             <div class="description-content">
               {$drawerState.currentMemoryRegion.kernelSettings.BlockDimensions.z}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="section-container flex-1 max-w-xl !variant-glass-secondary mx-3">
+        <div class="text-center font-mono">Grid Sizing:</div>
+        <div class="flex flex-row justify-around">
+          <div class="description-container mx-3">
+            <div class="description-prefix">X:</div>
+            <div class="description-content">
+              {$drawerState.currentMemoryRegion.kernelSettings.GridDimensions.x}
+            </div>
+          </div>
+          <div class="description-container mx-3">
+            <div class="description-prefix">Y:</div>
+            <div class="description-content">
+              {$drawerState.currentMemoryRegion.kernelSettings.GridDimensions.y}
+            </div>
+          </div>
+          <div class="description-container mx-3">
+            <div class="description-prefix">Z:</div>
+            <div class="description-content">
+              {$drawerState.currentMemoryRegion.kernelSettings.GridDimensions.z}
             </div>
           </div>
         </div>

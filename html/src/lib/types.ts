@@ -46,8 +46,8 @@ export class AccessInstance {
 
   constructor(
     address: string,
-    threadId: number,
     blockId: number,
+    threadId: number,
     isRead: boolean,
     kernelParameters: GenericInformation
   ) {
@@ -58,9 +58,9 @@ export class AccessInstance {
     this.addressInteger = BigInt(this.address);
 
     this.threadID = {
-      x: this.threadIdGlobal % kernelParameters.GridDimensions.x,
-      y: Math.floor(this.threadIdGlobal / kernelParameters.GridDimensions.x) % kernelParameters.GridDimensions.y,
-      z: Math.floor(this.threadIdGlobal / (kernelParameters.GridDimensions.x * kernelParameters.GridDimensions.y))
+      x: this.threadIdGlobal % kernelParameters.BlockDimensions.x,
+      y: Math.floor(this.threadIdGlobal / kernelParameters.BlockDimensions.x) % kernelParameters.BlockDimensions.y,
+      z: Math.floor(this.threadIdGlobal / (kernelParameters.BlockDimensions.x * kernelParameters.BlockDimensions.y))
     };
 
     this.blockID = {
