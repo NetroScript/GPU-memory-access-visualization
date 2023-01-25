@@ -42,6 +42,22 @@ class CudaMemAccessStorage : public Managed{
         unsigned int currentSize;
     };
 
+    struct MemoryRegion {
+        T* startAddress;
+        size_t elementCount;
+        std::string name;
+
+        // Add an equality operator to compare two memory regions
+        bool operator==(const MemoryRegion& other) const {
+            return startAddress == other.startAddress && elementCount == other.elementCount && name == other.name;
+        }
+
+        // Do the same for !=
+        bool operator!=(const MemoryRegion& other) const {
+            return !(startAddress == other.startAddress && elementCount == other.elementCount && name == other.name);
+        }
+    };
+
     // Have a struct to store logging data
     struct MemoryAccessLog {
 
@@ -101,7 +117,7 @@ private:
     MemoryAccessLog* memoryAccessLog = nullptr;
 
     // Store the memory regions by storing the starting address, the amount of elements, the size of a single element and a name
-    std::vector<std::tuple<T*, size_t, size_t, std::string>> memoryRegions;
+    std::vector<MemoryRegion> memoryRegions;
 
     // Helper function to format and throw CUDA errors
     void checkCudaError(cudaError_t err, std::string const &message = "Cuda Error.") {
@@ -112,78 +128,12 @@ private:
     }
 
 public:
-    // Define the default function for basic HTML processing
-    // The first element in the tuple is the HTML code, the second the JS code
-    // For this function the second will be empty
-    static std::tuple<std::string, std::string>
-    parseDataForStaticHTML(GlobalSettings settingsStruct,std::vector<std::tuple<T*, size_t, size_t, std::string>> memoryRegions, std::vector<MemoryAccessLog> accessLogs) {
 
-        std::stringstream htmlStream;
-
-        // Add section for global settings
-        htmlStream << "<h1>Kernel Settings</h2>" << std::endl;
-
-        // Add section for grid dimensions
-        htmlStream << "<h3>Grid Dimensions</h3>" << std::endl;
-        htmlStream << "<p>Grid Dimensions X: " << settingsStruct.gridDimX << "</p>" << std::endl;
-        htmlStream << "<p>Grid Dimensions Y: " << settingsStruct.gridDimY << "</p>" << std::endl;
-        htmlStream << "<p>Grid Dimensions Z: " << settingsStruct.gridDimZ << "</p>" << std::endl;
-
-        // Add section for block dimensions
-        htmlStream << "<h3>Block Dimensions</h3>" << std::endl;
-        htmlStream << "<p>Block Dimensions X: " << settingsStruct.blockDimX << "</p>" << std::endl;
-        htmlStream << "<p>Block Dimensions Y: " << settingsStruct.blockDimY << "</p>" << std::endl;
-        htmlStream << "<p>Block Dimensions Z: " << settingsStruct.blockDimZ << "</p>" << std::endl;
-
-        // Add section for warp size
-        htmlStream << "<h3>Warp Size</h3>" << std::endl;
-        htmlStream << "<p>Warp Size: " << settingsStruct.warpSize << "</p>" << std::endl;
-
-        // Add a section for each memory region and its name
-        htmlStream << "<h1>Memory Regions</h1>" << std::endl;
-
-        for (auto region : memoryRegions) {
-                htmlStream << "<h2>Region: " << std::get<3>(region) << "</h2>" << std::endl;
-                // As the memory region is already a pointer of the correct data type, we do not actually need to multiply the size by the size of the data type
-                htmlStream << "<p>Start Address: " << std::get<0>(region) << " (End Address:) " << std::get<0>(region) + std::get<1>(region) << "</p>" << std::endl;
-                htmlStream << "<p>Number of Elements: " << std::get<1>(region) << "</p>" << std::endl;
-                htmlStream << "<p>Size of Single Element: " << std::get<2>(region) << "</p>" << std::endl;
-        }
-
-        // Add the section for the memory access logs
-        htmlStream << "<h2>Memory Accesses</h2>" << std::endl;
-
-        // Add the table for the read logs
-        htmlStream << "<table>" << std::endl;
-        htmlStream << "<tr>" << std::endl;
-        htmlStream << "<th>Address</th>" << std::endl;
-        htmlStream << "<th>Block Id</th>" << std::endl;
-        htmlStream << "<th>Thread Id</th>" << std::endl;
-        htmlStream << "<th>Access Type</th>" << std::endl;
-        htmlStream << "</tr>" << std::endl;
-
-        // Loop through the read logs
-        for (auto &log: accessLogs) {
-            htmlStream << "<tr>" << std::endl;
-            htmlStream << "<td>" << log.Address() << "</td>" << std::endl;
-            htmlStream << "<td>" << log.BlockId() << "</td>" << std::endl;
-            htmlStream << "<td>" << log.ThreadId() << "</td>" << std::endl;
-            htmlStream << "<td>" << (log.IsRead() ? "Read" : "Write") << "</td>" << std::endl;
-            htmlStream << "</tr>" << std::endl;
-        }
-
-        htmlStream << "</table>" << std::endl;
-
-        // Return the HTML code
-        return std::make_tuple(htmlStream.str(), "");
-    }
-
-    // Define the default function for basic HTML processing
-    // The first element in the tuple is the HTML code, the second the JS code
-    // For this function the first will be empty
-    static std::tuple<std::string, std::string>
-    parseDataForJSPage(GlobalSettings settingsStruct,std::vector<std::tuple<T*, size_t, size_t, std::string>> memoryRegions, std::vector<MemoryAccessLog> accessLogs) {
-
+    // Function which generates a JSON string containing all the memory accesses
+    // This is used to both create a single JSON file, and also to create the data for the method parseDataForJSPage
+    static std::string getJSONFromData(const GlobalSettings &settingsStruct,
+                                       std::vector<MemoryRegion> &memoryRegions,
+                                       std::vector<MemoryAccessLog> &accessLogs) {
         std::stringstream jsStream;
 
         // Create a JSON object which describes all the available data
@@ -214,6 +164,12 @@ public:
         // Then store the warp size
         jsStream << "\"WarpSize\": " << settingsStruct.warpSize;
 
+        // Store the original size
+        jsStream << ",\"OriginalSize\": " << settingsStruct.originalSize;
+
+        // Store the current size
+        jsStream << ",\"CurrentSize\": " << settingsStruct.currentSize;
+
         // Close the GlobalSettings object
         jsStream << "},";
 
@@ -221,15 +177,15 @@ public:
         jsStream << "\"MemoryRegions\": [";
 
         // Loop through all memory regions and store them
-        for (auto region : memoryRegions) {
+        for (auto region: memoryRegions) {
             // Store the start address, number of elements and the size of a single element
             jsStream << "{";
-            jsStream << "\"StartAddress\": \"" << std::hex << std::get<0>(region) << "\",";
+            jsStream << "\"StartAddress\": \"" << std::hex << region.startAddress << "\",";
             // As the memory region is already a pointer of the correct data type, we do not actually need to multiply the size by the size of the data type
-            jsStream << "\"EndAddress\": \"" << std::get<0>(region) + std::get<1>(region) << "\",";
-            jsStream << "\"NumberOfElements\": " << std::dec << std::get<1>(region) << ",";
-            jsStream << "\"SizeOfSingleElement\": " << std::get<2>(region) << ",";
-            jsStream << "\"Name\": \"" << std::get<3>(region) << "\"";
+            jsStream << "\"EndAddress\": \"" << region.startAddress + region.elementCount << "\",";
+            jsStream << "\"NumberOfElements\": " << std::dec << region.elementCount << ",";
+            jsStream << "\"SizeOfSingleElement\": " << sizeof(T) << ",";
+            jsStream << "\"Name\": \"" << region.name << "\"";
             jsStream << "}";
 
             // If this is not the last element, add a comma
@@ -249,7 +205,7 @@ public:
         // entries directly instead of using an object with names for each entry
         for (auto &log: accessLogs) {
             jsStream << "[";
-            jsStream << "\"" <<  std::hex << log.Address() << "\",";
+            jsStream << "\"" << std::hex << log.Address() << "\",";
             jsStream << std::dec << log.BlockId() << ",";
             jsStream << log.ThreadId() << ",";
             jsStream << (log.IsRead() ? "true" : "false");
@@ -266,9 +222,88 @@ public:
 
         // Close the JSON object
         jsStream << "}";
+        return jsStream.str();
+    }
+
+    // Define the default function for basic HTML processing
+    // The first element in the tuple is the HTML code, the second the JS code
+    // For this function the second will be empty
+    static std::tuple<std::string, std::string>
+    parseDataForStaticHTML(GlobalSettings settingsStruct,std::vector<MemoryRegion> memoryRegions, std::vector<MemoryAccessLog> accessLogs) {
+
+        std::stringstream htmlStream;
+
+        // Add section for global settings
+        htmlStream << "<h1>Kernel Settings</h2>" << std::endl;
+
+        // Add section for grid dimensions
+        htmlStream << "<h3>Grid Dimensions</h3>" << std::endl;
+        htmlStream << "<p>Grid Dimensions X: " << settingsStruct.gridDimX << "</p>" << std::endl;
+        htmlStream << "<p>Grid Dimensions Y: " << settingsStruct.gridDimY << "</p>" << std::endl;
+        htmlStream << "<p>Grid Dimensions Z: " << settingsStruct.gridDimZ << "</p>" << std::endl;
+
+        // Add section for block dimensions
+        htmlStream << "<h3>Block Dimensions</h3>" << std::endl;
+        htmlStream << "<p>Block Dimensions X: " << settingsStruct.blockDimX << "</p>" << std::endl;
+        htmlStream << "<p>Block Dimensions Y: " << settingsStruct.blockDimY << "</p>" << std::endl;
+        htmlStream << "<p>Block Dimensions Z: " << settingsStruct.blockDimZ << "</p>" << std::endl;
+
+        // Add section for warp size
+        htmlStream << "<h3>Warp Size</h3>" << std::endl;
+        htmlStream << "<p>Warp Size: " << settingsStruct.warpSize << "</p>" << std::endl;
+
+        // Show the current and original size
+        htmlStream << "<h3>Size</h3>" << std::endl;
+        htmlStream << "<p>Original Size: " << settingsStruct.originalSize << "</p>" << std::endl;
+        htmlStream << "<p>Current Size: " << settingsStruct.currentSize << "</p>" << std::endl;
+
+        // Add a section for each memory region and its name
+        htmlStream << "<h1>Memory Regions</h1>" << std::endl;
+
+        for (auto region : memoryRegions) {
+                htmlStream << "<h2>Region: " << region.name << "</h2>" << std::endl;
+                // As the memory region is already a pointer of the correct data type, we do not actually need to multiply the size by the size of the data type
+                htmlStream << "<p>Start Address: " << region.startAddress << " (End Address:) " << region.startAddress + region.elementCount << "</p>" << std::endl;
+                htmlStream << "<p>Number of Elements: " << region.elementCount << "</p>" << std::endl;
+                htmlStream << "<p>Size of Single Element: " << sizeof(T) << "</p>" << std::endl;
+        }
+
+        // Add the section for the memory access logs
+        htmlStream << "<h2>Memory Accesses</h2>" << std::endl;
+
+        // Add the table for the read logs
+        htmlStream << "<table>" << std::endl;
+        htmlStream << "<tr>" << std::endl;
+        htmlStream << "<th>Address</th>" << std::endl;
+        htmlStream << "<th>Block Id</th>" << std::endl;
+        htmlStream << "<th>Thread Id</th>" << std::endl;
+        htmlStream << "<th>Access Type</th>" << std::endl;
+        htmlStream << "</tr>" << std::endl;
+
+        // Loop through the read logs
+        for (auto &log: accessLogs) {
+            htmlStream << "<tr>" << std::endl;
+            htmlStream << "<td>" << log.Address() << "</td>" << std::endl;
+            htmlStream << "<td>" << log.BlockId() << "</td>" << std::endl;
+            htmlStream << "<td>" << log.ThreadId() << "</td>" << std::endl;
+            htmlStream << "<td>" << (log.IsRead() ? "Read" : "Write") << "</td>" << std::endl;
+            htmlStream << "</tr>" << std::endl;
+        }
+
+        htmlStream << "</table>" << std::endl;
+
+        // Return the HTML code
+        return std::make_tuple(htmlStream.str(), "");
+    }
+
+// Define the default function for basic HTML processing
+    // The first element in the tuple is the HTML code, the second the JS code
+    // For this function the first will be empty
+    static std::tuple<std::string, std::string>
+    parseDataForJSPage(GlobalSettings settingsStruct,std::vector<MemoryRegion> memoryRegions, std::vector<MemoryAccessLog> accessLogs) {
 
         // Return the JS code
-        return std::make_tuple("", jsStream.str());
+        return std::make_tuple("", getJSONFromData(settingsStruct, memoryRegions, accessLogs));
     }
 
 private:
@@ -305,7 +340,7 @@ public:
     }
 
     __host__ void registerArray(T *array, size_t size, std::string name = "") {
-        memoryRegions.push_back(std::make_tuple(array, size, sizeof(array[0]), name));
+        memoryRegions.push_back({array, size, name});
     }
 
     __host__ ~CudaMemAccessStorage() {
@@ -340,11 +375,12 @@ public:
         }
     }
 
-        // Function to analyze the data which also frees up all used memory
+    // Function to analyze the data which also frees up all used memory
     // As third parameter a function lambda can be passed which is called for each memory access
-    void generateOutput(const std::string template_file, const std::string &output_path,
-                        std::function<std::tuple<std::string, std::string>(GlobalSettings settingsStruct, std::vector<std::tuple<T*, size_t, size_t, std::string>> memoryRegions,
-                                                                           std::vector<MemoryAccessLog> accessLogs)> customGenerationFunction = nullptr) {
+    void generateTemplatedOutput(const std::string template_file, const std::string &output_path,
+                                 std::function<std::tuple<std::string, std::string>(GlobalSettings settingsStruct,
+                                                                                    std::vector<MemoryRegion> memoryRegions,
+                                                                                    std::vector<MemoryAccessLog> accessLogs)> customGenerationFunction = nullptr) {
 
         // Data processing code here
 
@@ -365,9 +401,9 @@ public:
         std::vector<MemoryAccessLog> accessLogs;
 
         // Loop over the read logs
-        for (int i = 0; i < constantData.currentSize; i++) {
+        for (int i = 0; i < std::min(constantData.currentSize, constantData.originalSize); i++) {
             // Add the log to the vector
-            accessLogs.push_back(memoryAccessLog[i]);
+            accessLogs.emplace_back(memoryAccessLog[i]);
         }
 
         // Run the custom generation function, if one was passed
@@ -402,6 +438,34 @@ public:
             return;
         }
         output_file << template_file_string;
+
+        // Close the output file
+        output_file.close();
+    }
+
+    void generateJSONOutput(const std::string &output_path) {
+
+        // Generate a vector for the accessLogs
+        std::vector<MemoryAccessLog> accessLogs;
+
+        // Loop over the read logs
+        for (int i = 0; i < std::min(constantData.currentSize, constantData.originalSize); i++) {
+            // Add the log to the vector
+            accessLogs.emplace_back(memoryAccessLog[i]);
+        }
+
+        // Use the static JSON generation function and pass it the local data for ease of use
+        const std::string json = getJSONFromData(constantData, memoryRegions, accessLogs);
+
+        // Write the data to the output file
+        std::ofstream output_file(output_path);
+
+        if (!output_file) {
+            std::cout << "Could not open output file at " << output_path << std::endl;
+            return;
+        }
+
+        output_file << json;
 
         // Close the output file
         output_file.close();

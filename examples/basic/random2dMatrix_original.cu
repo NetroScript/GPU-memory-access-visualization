@@ -5,7 +5,6 @@
 #include <vector>
 #include <random>
 #include <algorithm>
-#include "../../include/cuda_mav.cuh"
 
 // The wrapper macro is required, that __LINE__ is correct pointing to the line, where the check fails
 #define checkCudaError(ans)                          \
@@ -23,17 +22,17 @@ inline void checkCudaErrorFunc(cudaError_t err, const char *file, int line)
    }
 }
 
-__global__ void decrement(unsigned int const size, CudaMemAccessLogger<unsigned int> *data, CudaMemAccessLogger<unsigned int> *control)
+__global__ void decrement(unsigned int const size, unsigned int *data, unsigned int *control)
 {
    int index = threadIdx.x + blockIdx.x * blockDim.x;
    int stride = blockDim.x * gridDim.x;
 
    for (int i = index; i < size; i += stride)
    {
-      while ((*data)[i] > 0)
+      while (data[i] > 0)
       {
-         (*data)[i] = (*data)[i] - 1;
-         (*control)[i] = (*control)[i] + 1;
+         data[i] = data[i] - 1;
+         control[i] = control[i] + 1;
       }
    }
 }
@@ -83,10 +82,10 @@ int main(int argc, char **argv)
        { return distribution(generator); });
 
    // enable me, to create a hot spot area
-   // the hot spot area should looks interesting in the memory access visualization
-   if (true)
+   // the hot spot area should looks interessting in the memory access visualization
+   if (false)
    {
-      hot_spot(h_data, dim, 8, 10, 10, 20);
+      hot_spot(h_data, dim, 8, 10, 10, 3);
    }
 
    // enable me, to print the matrix
@@ -121,26 +120,14 @@ int main(int argc, char **argv)
    // copy h_controll to initialize all values with 0 on the GPU
    checkCudaError(cudaMemcpy(d_control, h_control.data(), buffer_size_byte, cudaMemcpyHostToDevice));
 
-   // Define amount of accesses you want to log and create a memory object which stores them
-   auto* memAccessStorage = new CudaMemAccessStorage<unsigned int>(dim * dim * 50);
-
-    // Wrap the data classes with the custom logging class
-   auto* data = new CudaMemAccessLogger<unsigned int>(d_data, dim*dim, "Decremented Data", memAccessStorage);
-   auto* control = new CudaMemAccessLogger<unsigned int>(d_control, dim*dim, "Control Data", memAccessStorage);
-
    // change me and look, how the visulization looks like
    int const blockSize = 32;
    int const numBlocks = ((dim * dim) + blockSize - 1) / blockSize;
 
-   decrement<<<numBlocks, blockSize>>>(dim * dim, data, control);
-
+   decrement<<<numBlocks, blockSize>>>(dim * dim, d_data, d_control);
    checkCudaError(cudaGetLastError());
 
    checkCudaError(cudaMemcpy(h_control.data(), d_control, buffer_size_byte, cudaMemcpyDeviceToHost));
-
-   // Generate the output json file for visualization
-   // It needs to be below the memory copy or alternatively after a synchronize to make sure the kernel is finished
-   memAccessStorage->generateJSONOutput("../../../out/random2DMatrix.json");
 
    bool success = true;
 
@@ -179,11 +166,6 @@ int main(int argc, char **argv)
 
    checkCudaError(cudaFree(d_data));
    checkCudaError(cudaFree(d_control));
-
-   // Free the memory of the custom logging classes
-   delete memAccessStorage;
-   delete data;
-   delete control;
 
    return 0;
 }

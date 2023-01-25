@@ -2,7 +2,6 @@
 #include <random>
 #include <vector>
 #include <algorithm>
-#include "../../include/cuda_mav.cuh"
 
 // The wrapper macro is required, that __LINE__ is correct pointing to the line, where the check fails
 #define checkCudaError(ans)                            \
@@ -25,7 +24,7 @@ inline void checkCudaErrorFunc(cudaError_t err, const char *file, int line)
 // A grid stride loop maps the logical blocks to cuda blocks (both has the same size).
 // The output array has the size of the number of logical blocks.
 // Uses only global memory.
-__global__ void reduce_gm(unsigned int const size, CudaMemAccessLogger<unsigned int>* input, CudaMemAccessLogger<unsigned int>* output)
+__global__ void reduce_gm(unsigned int const size, unsigned int *const input, unsigned int *const output)
 {
     int const id = threadIdx.x + blockIdx.x * blockDim.x;
     int const stride = blockDim.x * gridDim.x;
@@ -37,14 +36,14 @@ __global__ void reduce_gm(unsigned int const size, CudaMemAccessLogger<unsigned 
         {
             if (threadIdx.x < max_threads_blocks)
             {
-                (*input)[block_offset_id] = (*input)[block_offset_id + max_threads_blocks] + (*input)[block_offset_id];
+                input[block_offset_id] += input[block_offset_id + max_threads_blocks];
             }
             __syncthreads();
         }
         if (threadIdx.x == 0)
         {
             // write single element to output
-            (*output)[virtual_block_id] = (*input)[block_offset_id];
+            output[virtual_block_id] = input[block_offset_id];
         }
         __syncthreads();
     }
@@ -142,13 +141,6 @@ int main(int argc, char **argv)
     checkCudaError(cudaMalloc((void **)&d_output, output_size_byte));
     checkCudaError(cudaMemcpy(d_data, h_data.data(), data_size_byte, cudaMemcpyHostToDevice));
 
-    // Define amount of accesses you want to log and create a memory object which stores them
-    auto* memAccessStorage = new CudaMemAccessStorage<unsigned int>(size*20);
-
-    // Wrap the data classes with the custom logging class
-    auto* input = new CudaMemAccessLogger<unsigned int>(d_data, size, "Reduced Data", memAccessStorage);
-    auto* output = new CudaMemAccessLogger<unsigned int>(d_output, output_elements, "Reduced Output", memAccessStorage);
-
     bool const sm_version = false;
 
     if (!sm_version)
@@ -158,7 +150,7 @@ int main(int argc, char **argv)
             std::cerr << "size needs to be multiple of number of threads" << std::endl;
             exit(1);
         }
-        reduce_gm<<<blocks, threads>>>(size, input, output);
+        reduce_gm<<<blocks, threads>>>(size, d_data, d_output);
     }
     else
     {
@@ -187,13 +179,6 @@ int main(int argc, char **argv)
         std::cout << "sum: " << sum << std::endl;
         std::cout << "expected result: " << expected_result << std::endl;
     }
-
-    memAccessStorage->generateJSONOutput("../../../out/reduce.json");
-
-    // Free up the managed memory objects
-    delete memAccessStorage;
-    delete input;
-    delete output;
 
     return 0;
 }
