@@ -13,6 +13,7 @@ export interface DrawerState {
 export interface PageState {
   backGroundContrastBlack: boolean;
   showIndex: boolean;
+  showCombinedAccess: boolean;
   availableMemoryRegions: MemoryRegionManager[];
   showGrid: boolean;
   customMemoryWidth: number;
@@ -24,42 +25,34 @@ export const ListPlaceHolder = {
   isPlaceHolder: true
 };
 
-function createDrawerStateStore() {
-  const { subscribe, set, update } = writable<DrawerState>({
-    currentMemoryRegion: null,
-    currentMemoryRegionIndex: -1,
-    showSingleAccessTable: false,
-    showReadAccess: true
-  });
+export const drawerState = writable<DrawerState>({
+  currentMemoryRegion: null,
+  currentMemoryRegionIndex: -1,
+  showSingleAccessTable: false,
+  showReadAccess: true
+});
+export const drawerContent = derived(drawerState, ($drawerState) => {
+  if ($drawerState.currentMemoryRegion === null) {
+    return [];
+  }
 
-  return {
-    subscribe,
-    set,
-    update,
-    getCurrentData: () => {
-      // Return a copy of the current data
-      let currentData: DrawerState;
-      subscribe((value) => (currentData = value))();
-      // On the current data, we want to return a copy of the current memory region information
-      if (currentData.showSingleAccessTable) {
-        return currentData.currentMemoryRegion.getAllAccesses(currentData.currentMemoryRegionIndex);
-      }
-      if (currentData.showReadAccess) {
-        return currentData.currentMemoryRegion.getReadAccesses(currentData.currentMemoryRegionIndex);
-      } else {
-        return currentData.currentMemoryRegion.getWriteAccesses(currentData.currentMemoryRegionIndex);
-      }
-    }
-  };
-}
+  if ($drawerState.showSingleAccessTable) {
+    return $drawerState.currentMemoryRegion.getAllAccesses($drawerState.currentMemoryRegionIndex);
+  }
+  if ($drawerState.showReadAccess) {
+    return $drawerState.currentMemoryRegion.getReadAccesses($drawerState.currentMemoryRegionIndex);
+  } else {
+    return $drawerState.currentMemoryRegion.getWriteAccesses($drawerState.currentMemoryRegionIndex);
+  }
+});
 
-export const drawerState = createDrawerStateStore();
 export const pageState = writable<PageState>({
   backGroundContrastBlack: true,
   showIndex: false,
   availableMemoryRegions: [],
   showGrid: true,
-  customMemoryWidth: 0
+  customMemoryWidth: 0,
+  showCombinedAccess: false
 });
 
 export const currentMemoryRegion = writable<MemoryRegionManager | typeof ListPlaceHolder>(ListPlaceHolder);

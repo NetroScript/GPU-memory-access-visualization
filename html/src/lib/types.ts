@@ -94,6 +94,8 @@ export class MemoryRegionManager {
   readonly readAccesses: Map<number, AccessInstance[]>;
   // For each index of the array data structure, we store all accesses which write to this index
   readonly writeAccesses: Map<number, AccessInstance[]>;
+  // To keep chronological order we also need to store the combined accesses
+  private combinedAccesses: Map<number, AccessInstance[]>;
 
   readonly kernelSettings: GenericInformation;
 
@@ -168,6 +170,7 @@ export class MemoryRegionManager {
 
     this.readAccesses = new Map<number, AccessInstance[]>();
     this.writeAccesses = new Map<number, AccessInstance[]>();
+    this.combinedAccesses = new Map<number, AccessInstance[]>();
 
     this.kernelSettings = kernelSettings;
   }
@@ -213,6 +216,12 @@ export class MemoryRegionManager {
         this._highestWriteCount = this.writeAccesses.get(access.index)?.length || 0;
       }
     }
+
+    // Also add it to the combinedAccesses map
+    if (!this.combinedAccesses.has(access.index)) {
+      this.combinedAccesses.set(access.index, []);
+    }
+    this.combinedAccesses.get(access.index)?.push(access);
 
     if (this._highestReadCount > this._highestTotalCount) {
       this._highestTotalCount = this._highestReadCount;
@@ -283,7 +292,7 @@ export class MemoryRegionManager {
 
   // Getter for all accesses of a specific index
   getAllAccesses(index: number): AccessInstance[] {
-    return [...(this.readAccesses.get(index) || []), ...(this.writeAccesses.get(index) || [])];
+    return this.combinedAccesses.get(index) || [];
   }
 
   // Getter for all accesses of a specific address

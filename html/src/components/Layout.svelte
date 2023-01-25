@@ -66,7 +66,7 @@
         </button>
         <button
           class="btn-icon variant-soft min-w-[50px]"
-          on:click={() => ($drawerState.showSingleAccessTable = !$drawerState.showSingleAccessTable)}
+          on:click={() => ($pageState.showCombinedAccess = !$pageState.showCombinedAccess)}
           use:tooltip={{
             content: 'Toggle between showing read and write separately and showing the total access count',
             position: 'bottom'
@@ -75,7 +75,7 @@
           <Icon
             class="drop-shadow-xl min-w-[32px]"
             height="32"
-            icon={$drawerState.showSingleAccessTable ? outlineSplitscreen : outlineRectangle}
+            icon={$pageState.showCombinedAccess ? outlineSplitscreen : outlineRectangle}
             width="32"
           />
         </button>

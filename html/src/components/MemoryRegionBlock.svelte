@@ -38,7 +38,7 @@
     </div>
   {/if}
   <div class="flex flex-col flex-1" title={'Index: ' + index}>
-    {#if $drawerState.showSingleAccessTable}
+    {#if $pageState.showCombinedAccess}
       <div
         class="flex-1 flex justify-center items-center bg-access-all high-contrast-text-shadow content-cell"
         style="--tw-bg-opacity: {totalOpacity}"
