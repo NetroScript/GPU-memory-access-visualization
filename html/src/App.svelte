@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { fade, slide, scale } from 'svelte/transition';
+
   import Layout from './components/Layout.svelte';
 
   // Have map storing for each memory address the corresponding memory accesses
@@ -111,12 +113,14 @@
 </script>
 
 <Layout>
-  <div class="h-full mx-auto flex flex-row">
+  <div class="h-full mx-auto flex flex-row" transition:fade>
     {#if validTemplate}
       {#if $currentMemoryRegion != null && !('isPlaceHolder' in $currentMemoryRegion)}
-        <VisualizeMemoryRegion MemoryRegion={$currentMemoryRegion} />
+        <div out:fade={{ duration: 200 }} in:slide>
+          <VisualizeMemoryRegion MemoryRegion={$currentMemoryRegion} />
+        </div>
       {:else}
-        <div class="flex flex-col justify-center items-center w-full h-full">
+        <div class="flex flex-col justify-center items-center w-full h-full" in:slide={{ delay: 200 }}>
           <h1 class="text-3xl font-bold opacity-30 ">Please select a memory region</h1>
           <div class="px-12 my-12 w-full">
             <FileDropzone bind:files title="You can upload additional .json files here." />
@@ -124,7 +128,7 @@
         </div>
       {/if}
     {:else}
-      <div class="flex flex-col justify-center items-center w-full h-full text-center">
+      <div class="flex flex-col justify-center items-center w-full h-full text-center" in:slide={{ delay: 200 }}>
         <h1 class="text-3xl font-bold opacity-30 ">
           Please load in valid data for this template.<br /> Without data this HTML file can't do anything.
         </h1>

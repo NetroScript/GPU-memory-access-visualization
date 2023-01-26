@@ -222,13 +222,6 @@ export class MemoryRegionManager {
       this.combinedAccesses.set(access.index, []);
     }
     this.combinedAccesses.get(access.index)?.push(access);
-
-    if (this._highestReadCount > this._highestTotalCount) {
-      this._highestTotalCount = this._highestReadCount;
-    }
-    if (this._highestWriteCount > this._highestTotalCount) {
-      this._highestTotalCount = this._highestWriteCount;
-    }
   }
 
   addMemoryAccessIfInRegion(access: AccessInstance) {
@@ -323,6 +316,12 @@ export class MemoryRegionManager {
     // For that we iterate in order over all indexes, and if there is a gap greater than 1, we add a sparse element
     for (let i = 0; i < allIndexes.length; i++) {
       const index = allIndexes[i];
+
+      // Check if the total count of this index is the highest so far
+      if (this.combinedAccesses.get(index)?.length > this._highestTotalCount) {
+        this._highestTotalCount = this.combinedAccesses.get(index)?.length || 0;
+      }
+
       // Also store the next index if it exists
       const nextIndex = allIndexes[i + 1] || index;
 

@@ -13,6 +13,7 @@ specifiers:
   '@typescript-eslint/parser': ^5.49.0
   autoprefixer: ^10.4.13
   color2k: ^2.0.1
+  cubehelix: ^1.0.4
   esbuild: ^0.17.4
   eslint: ^8.32.0
   eslint-config-prettier: ^8.6.0
@@ -42,6 +43,7 @@ devDependencies:
   '@typescript-eslint/parser': 5.49.0_7uibuqfxkfaozanbtbziikiqje
   autoprefixer: 10.4.13_postcss@8.4.21
   color2k: 2.0.1
+  cubehelix: 1.0.4
   esbuild: 0.17.4
   eslint: 8.32.0
   eslint-config-prettier: 8.6.0_eslint@8.32.0
@@ -954,6 +956,10 @@ packages:
     resolution: {integrity: sha512-/Tb/JcjK111nNScGob5MNtsntNM1aCNUDipB/TkwZFhyDrrE47SOx/18wF2bbjgc3ZzCSKW1T5nt5EbFoAz/Vg==}
     engines: {node: '>=4'}
     hasBin: true
+    dev: true
+
+  /cubehelix/1.0.4:
+    resolution: {integrity: sha512-KKtmJkF4eW1P7/gRXhGiI2fs9gxW90TkIZ8E0hMdP4PbQ0luZuXHNTyBrAOg7Qzxt0LZa2mK4bOSBFojRLczhg==}
     dev: true
 
   /debug/4.3.4:

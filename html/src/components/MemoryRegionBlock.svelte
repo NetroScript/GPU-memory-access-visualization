@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { drawerState } from '../lib/stores';
+  import { cubeHelixLookup, drawerState } from '../lib/stores';
   import { MemoryRegionManager } from '../lib/types';
   import { drawerStore, tooltip } from '@skeletonlabs/skeleton';
   import { pageState } from '../lib/stores';
-  import type { ArgsTooltip } from '@skeletonlabs/skeleton/utilities/Tooltip/tooltip';
 
   export let MemoryRegion: MemoryRegionManager;
   export let index: number;
@@ -26,6 +25,9 @@
     readOpacity = readCount / MemoryRegion.highestReadCount || 0;
     writeOpacity = writeCount / MemoryRegion.highestWriteCount || 0;
     totalOpacity = totalCount / MemoryRegion.highestTotalCount || 0;
+    if ($pageState.customTotalAccessCount > 0) {
+      totalOpacity = totalCount / $pageState.customTotalAccessCount;
+    }
 
     originalMemoryAddress = MemoryRegion.convertIndexToAddressString(index);
   }
@@ -40,8 +42,10 @@
   <div class="flex flex-col flex-1" title={'Index: ' + index}>
     {#if $pageState.showCombinedAccess}
       <div
-        class="flex-1 flex justify-center items-center bg-access-all high-contrast-text-shadow content-cell"
-        style="--tw-bg-opacity: {totalOpacity}"
+        class="flex-1 flex justify-center bg-access-all  font-black high-contrast-stroke items-center high-contrast-text-shadow content-cell"
+        style="--tw-bg-opacity: {totalOpacity};{$pageState.useCustomColorScheme
+          ? 'background-color: ' + $cubeHelixLookup(totalOpacity) + ';'
+          : ''}"
         on:click={() => {
           drawerStore.open({
             position: 'bottom'
