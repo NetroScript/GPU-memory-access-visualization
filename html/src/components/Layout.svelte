@@ -1,6 +1,4 @@
 <script>
-  import '../theme.pcss';
-  import '@skeletonlabs/skeleton/styles/all.css';
   import '../app.pcss';
   import { AppShell, AppBar, LightSwitch, tooltip, Modal, modalStore } from '@skeletonlabs/skeleton';
   import Icon from '@iconify/svelte';
