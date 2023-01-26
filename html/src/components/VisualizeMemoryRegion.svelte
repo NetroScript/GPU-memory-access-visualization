@@ -22,7 +22,7 @@
   }
 </script>
 
-<div class="text-center m-3 w-full">
+<div class="text-center m-3">
   <div class="badge">
     {MemoryRegion.name}
   </div>
