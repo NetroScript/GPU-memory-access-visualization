@@ -42,7 +42,7 @@
   <div class="flex flex-col flex-1" title={'Index: ' + index}>
     {#if $pageState.showCombinedAccess}
       <div
-        class="flex-1 flex justify-center bg-access-all  font-black high-contrast-stroke items-center high-contrast-text-shadow content-cell"
+        class="!text-white flex-1 flex justify-center bg-access-all font-black high-contrast-stroke items-center high-contrast-text-shadow content-cell "
         style="--tw-bg-opacity: {totalOpacity};{$pageState.useCustomColorScheme
           ? 'background-color: ' + $cubeHelixLookup(totalOpacity) + ';'
           : ''}"

@@ -116,7 +116,7 @@
   <div class="h-full mx-auto flex flex-row" transition:fade>
     {#if validTemplate}
       {#if $currentMemoryRegion != null && !('isPlaceHolder' in $currentMemoryRegion)}
-        <div out:fade={{ duration: 200 }} in:slide>
+        <div out:fade={{ duration: 200 }} in:slide class="w-full">
           <VisualizeMemoryRegion MemoryRegion={$currentMemoryRegion} />
         </div>
       {:else}
