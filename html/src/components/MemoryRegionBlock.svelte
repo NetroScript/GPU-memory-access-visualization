@@ -1,7 +1,7 @@
 <script lang="ts">
   import { cubeHelixLookup, drawerState } from '../lib/stores';
   import { MemoryRegionManager } from '../lib/types';
-  import { drawerStore, tooltip } from '@skeletonlabs/skeleton';
+  import { drawerStore } from '@skeletonlabs/skeleton';
   import { pageState } from '../lib/stores';
 
   export let MemoryRegion: MemoryRegionManager;

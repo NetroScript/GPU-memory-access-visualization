@@ -1,12 +1,6 @@
 <script lang="ts">
-  import { Modal, modalStore, RangeSlider, SlideToggle } from '@skeletonlabs/skeleton';
-  import {
-    pageState,
-    cubeHelixParameters,
-    cubeHelixLookup,
-    cubeHelixMapFunction,
-    currentMemoryRegion
-  } from '../lib/stores';
+  import { Modal, RangeSlider, SlideToggle } from '@skeletonlabs/skeleton';
+  import { pageState, cubeHelixParameters, currentMemoryRegion } from '../lib/stores';
   import { derived, writable } from 'svelte/store';
   import { cubehelix } from 'cubehelix';
 

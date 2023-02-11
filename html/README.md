@@ -2,6 +2,11 @@
 
 This folders contains the project which generates the HTML template.
 
+The overall application with a reduction dataset loaded in looks like this:
+
+![Application Preview](https://user-images.githubusercontent.com/18115780/218279005-7b91f1ed-f029-4e75-90d8-c6d1c5dcc3fc.png)
+
+
 It is build on the following technologies (those are the most important ones):
 
 * TypeScript
@@ -30,6 +35,8 @@ But first how to use and install the project.
 ## Using the project
 
 To use the project, you don't need to do anything else. There should be a pre-built HTML file ready for you to use.
+
+Besides the text below, there is an [additional Documentation file here](FEATURES.md), which showcases the individual features with images.
 
 To then make use of that file the suggested way is to generate static `.json` data files with the C++ header using any of the available methods for JSON. And then opening the HTML file and dragging and dropping the `.json` into the dedicated area. This method has the fastest loading speed, as then the browser can directly read in the file and parse it with a JSON parser instead of using a more generic (and slower) parser.
 
@@ -98,6 +105,8 @@ This will currently create a `build` folder with an `index.html` file in it.
 ## More details about the used packages and their files
 
 All packages used in `package.json` are listed here with a short explanation (in alphabetical order).
+
+All packages are in the `devDependencies` section, as we are bundling everything into a single HTML file, so we do not have runtime dependencies (as those will be bundled into that file).
 
 * `@iconify/icons-ic`
   * Add the `icons-ic` icon set for offline use. A list of all available icons can be found [here](https://icon-sets.iconify.design/ic/).
@@ -170,7 +179,7 @@ The current code is quite simple, and just's loads in the Svelte component in th
 
 The entirety of the remaining application is then contained within the Svelte components.
 
-`App.svelte` loads in the `src/components/Layout.svelte` component for overall page structure (header, ...). Then all the key data is loaded. For that a JSON object is parsed which is supposed to contain all the memory information. During development example data from `data` is loaded in. At export, it will be just a placeholder string, which needs to be filled in by the C++ application.
+`App.svelte` loads in the `src/components/Layout.svelte` component for overall page structure (header, ...). Then all the key data is loaded. For that a JSON object is parsed which is supposed to contain all the memory information. During development example data from `data` is loaded in. At export, it will be just a placeholder string, which needs to be filled in by the C++ application. Alternatively there is a drag n' drop area where users can drag in their files.
 
 Global CSS classes are loaded in `src/components/Layout.svelte`, to define own global CSS `src/app.pcss` can be used. But it is advised to keep CSS contained within the Svelte components. 
 

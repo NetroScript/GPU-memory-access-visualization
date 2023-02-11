@@ -1,7 +1,12 @@
 <script lang="ts">
-  import { fade, slide, scale } from 'svelte/transition';
-
+  import { fade, slide } from 'svelte/transition';
+  import { FileDropzone } from '@skeletonlabs/skeleton';
+  import { dummyData } from './lib/loadDummyData';
+  import InspectDrawer from './components/InspectDrawer.svelte';
+  import VisualizeMemoryRegion from './components/VisualizeMemoryRegion.svelte';
+  import { currentMemoryRegion, pageState } from './lib/stores';
   import Layout from './components/Layout.svelte';
+  import { AccessInstance, MemoryRegionManager, type OutputJSON } from './lib/types';
 
   // Have map storing for each memory address the corresponding memory accesses
   // To have a range, we also need to store our minimum and maximum address
@@ -11,15 +16,6 @@
   BigInt.prototype.toJSON = function () {
     return this.toString();
   };
-
-  import { AccessInstance, type GenericInformation, MemoryRegionManager, type OutputJSON } from './lib/types';
-
-  import { Drawer, drawerStore, FileDropzone } from '@skeletonlabs/skeleton';
-  import { dummyData } from './lib/loadDummyData';
-  import InspectDrawer from './components/InspectDrawer.svelte';
-  import VisualizeMemoryRegion from './components/VisualizeMemoryRegion.svelte';
-  import { pageState } from './lib/stores';
-  import { currentMemoryRegion } from './lib/stores';
 
   // Function to load a valid JSON file into the application as memory structure
   const loadJSON = (json: OutputJSON) => {
