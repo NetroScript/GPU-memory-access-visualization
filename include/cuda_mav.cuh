@@ -488,7 +488,7 @@ private:
     T *d_data;
 
     // Have a pointer to the storage class we are using
-    CudaMemAccessStorage<T> *storage;
+    CudaMemAccessStorage<T>* storage;
 
     // Implement a proxy class so we can both read and write from the array when accessing the array operator
     class AccessProxy {
@@ -543,21 +543,16 @@ public:
     }
 
     // Constructor which allocates the memory on the device
-    __host__ CudaMemAccessLogger(T *array_data, size_t array_length, std::string description_name, CudaMemAccessStorage<T> *cma_storage = nullptr) {
+    __host__ CudaMemAccessLogger(T *array_data, size_t array_length, std::string description_name, CudaMemAccessStorage<T> &cma_storage) {
 
         // Store the passed data pointer within the class
         d_data = array_data;
 
-        // If the storage class is not null, we need to store it
-        if (cma_storage != nullptr) {
-            // Store the storage class
-            storage = cma_storage;
-        }
-            // If it is null, we need to create a new storage class
-        else {
-            // Create a new storage class
-            storage = new CudaMemAccessStorage<T>(10000);
-        }
+
+        // Store the storage class
+        storage = &cma_storage;
+
+
 
         storage->registerArray(array_data, array_length, description_name);
     }

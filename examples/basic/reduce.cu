@@ -2,6 +2,7 @@
 #include <random>
 #include <vector>
 #include <algorithm>
+#include <memory>
 #include "../../include/cuda_mav.cuh"
 
 // The wrapper macro is required, that __LINE__ is correct pointing to the line, where the check fails
@@ -25,7 +26,7 @@ inline void checkCudaErrorFunc(cudaError_t err, const char *file, int line)
 // A grid stride loop maps the logical blocks to cuda blocks (both has the same size).
 // The output array has the size of the number of logical blocks.
 // Uses only global memory.
-__global__ void reduce_gm(unsigned int const size, CudaMemAccessLogger<unsigned int>* input, CudaMemAccessLogger<unsigned int>* output)
+__global__ void reduce_gm(unsigned int const size, CudaMemAccessLogger<unsigned int> input, CudaMemAccessLogger<unsigned int> output)
 {
     int const id = threadIdx.x + blockIdx.x * blockDim.x;
     int const stride = blockDim.x * gridDim.x;
@@ -37,14 +38,14 @@ __global__ void reduce_gm(unsigned int const size, CudaMemAccessLogger<unsigned 
         {
             if (threadIdx.x < max_threads_blocks)
             {
-                (*input)[block_offset_id] = (*input)[block_offset_id + max_threads_blocks] + (*input)[block_offset_id];
+                input[block_offset_id] = input[block_offset_id + max_threads_blocks] + input[block_offset_id];
             }
             __syncthreads();
         }
         if (threadIdx.x == 0)
         {
             // write single element to output
-            (*output)[virtual_block_id] = (*input)[block_offset_id];
+            output[virtual_block_id] = input[block_offset_id];
         }
         __syncthreads();
     }
@@ -56,7 +57,7 @@ __global__ void reduce_gm(unsigned int const size, CudaMemAccessLogger<unsigned 
 // The output array has the size of the number of logical blocks.
 // Uses shared memory to speed up.
 template <auto LOGICAL_BLOCK_SIZE>
-__global__ void reduce_sm(unsigned int const size, unsigned int const upper_bound_size, unsigned int *const input, unsigned int *const output)
+__global__ void reduce_sm(unsigned int const size, unsigned int const upper_bound_size, CudaMemAccessLogger<unsigned int>  input, CudaMemAccessLogger<unsigned int>  output)
 {
     __shared__ unsigned int reduction_memory[LOGICAL_BLOCK_SIZE];
 
@@ -142,12 +143,15 @@ int main(int argc, char **argv)
     checkCudaError(cudaMalloc((void **)&d_output, output_size_byte));
     checkCudaError(cudaMemcpy(d_data, h_data.data(), data_size_byte, cudaMemcpyHostToDevice));
 
+    checkCudaError(cudaMemcpy(h_output.data(), d_output, output_size_byte, cudaMemcpyDeviceToHost));
+
     // Define amount of accesses you want to log and create a memory object which stores them
-    auto* memAccessStorage = new CudaMemAccessStorage<unsigned int>(size*20);
+    // Use a unique_ptr to automatically free the memory
+    auto memAccessStorage = std::make_unique<CudaMemAccessStorage<unsigned int>>(size*20);
 
     // Wrap the data classes with the custom logging class
-    auto* input = new CudaMemAccessLogger<unsigned int>(d_data, size, "Reduced Data", memAccessStorage);
-    auto* output = new CudaMemAccessLogger<unsigned int>(d_output, output_elements, "Reduced Output", memAccessStorage);
+    auto input = CudaMemAccessLogger<unsigned int>(d_data, size, "Reduced Data", *memAccessStorage);
+    auto output = CudaMemAccessLogger<unsigned int>(d_output, output_elements, "Reduced Output", *memAccessStorage);
 
     bool const sm_version = false;
 
@@ -163,8 +167,10 @@ int main(int argc, char **argv)
     else
     {
         size_t const upper_bound_size = output_elements * threads;
-        reduce_sm<threads><<<blocks, threads>>>(size, upper_bound_size, d_data, d_output);
+        reduce_sm<threads><<<blocks, threads>>>(size, upper_bound_size, input, output);
     }
+    // Synchronize to check for any kernel launch errors.
+    cudaDeviceSynchronize();
     checkCudaError(cudaGetLastError());
 
     checkCudaError(cudaMemcpy(h_output.data(), d_output, output_size_byte, cudaMemcpyDeviceToHost));
@@ -189,11 +195,6 @@ int main(int argc, char **argv)
     }
 
     memAccessStorage->generateJSONOutput("../../../out/reduce.json");
-
-    // Free up the managed memory objects
-    delete memAccessStorage;
-    delete input;
-    delete output;
 
     return 0;
 }

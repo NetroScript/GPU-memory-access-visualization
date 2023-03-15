@@ -23,17 +23,17 @@ inline void checkCudaErrorFunc(cudaError_t err, const char *file, int line)
    }
 }
 
-__global__ void decrement(unsigned int const size, CudaMemAccessLogger<unsigned int> *data, CudaMemAccessLogger<unsigned int> *control)
+__global__ void decrement(unsigned int const size, CudaMemAccessLogger<unsigned int> data, CudaMemAccessLogger<unsigned int> control)
 {
    int index = threadIdx.x + blockIdx.x * blockDim.x;
    int stride = blockDim.x * gridDim.x;
 
    for (int i = index; i < size; i += stride)
    {
-      while ((*data)[i] > 0)
+      while (data[i] > 0)
       {
-         (*data)[i] = (*data)[i] - 1;
-         (*control)[i] = (*control)[i] + 1;
+         data[i] = data[i] - 1;
+         control[i] = control[i] + 1;
       }
    }
 }
@@ -125,8 +125,8 @@ int main(int argc, char **argv)
    auto* memAccessStorage = new CudaMemAccessStorage<unsigned int>(dim * dim * 50);
 
     // Wrap the data classes with the custom logging class
-   auto* data = new CudaMemAccessLogger<unsigned int>(d_data, dim*dim, "Decremented Data", memAccessStorage);
-   auto* control = new CudaMemAccessLogger<unsigned int>(d_control, dim*dim, "Control Data", memAccessStorage);
+   auto data = CudaMemAccessLogger<unsigned int>(d_data, dim*dim, "Decremented Data", *memAccessStorage);
+   auto control = CudaMemAccessLogger<unsigned int>(d_control, dim*dim, "Control Data", *memAccessStorage);
 
    // change me and look, how the visulization looks like
    int const blockSize = 32;
@@ -182,8 +182,6 @@ int main(int argc, char **argv)
 
    // Free the memory of the custom logging classes
    delete memAccessStorage;
-   delete data;
-   delete control;
 
    return 0;
 }

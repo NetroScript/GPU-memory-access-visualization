@@ -12,7 +12,7 @@ inline void checkCudaError(cudaError_t err) {
 }
 
 
-__global__ void kernel(int prob_size, CudaMemAccessLogger<int> * input, CudaMemAccessLogger<int> * output){
+__global__ void kernel(int prob_size, CudaMemAccessLogger<int>* input, CudaMemAccessLogger<int>* output){
     int id = threadIdx.x + blockIdx.x * blockDim.x;
     if (id < prob_size) {
         (*output)[id] = (*input)[id];
@@ -38,14 +38,14 @@ int main(){
     CudaMemAccessStorage<int>* memAccessStorage = new CudaMemAccessStorage<int>(10000);
 
     // The overloaded new operator generates a managed memory object
-    CudaMemAccessLogger<int>* input = new CudaMemAccessLogger<int>(d_input, prob_size, "Input Datastructure", memAccessStorage);
-    CudaMemAccessLogger<int>* output = new CudaMemAccessLogger<int>(d_output, prob_size, "Output Datastructure", memAccessStorage);
+    CudaMemAccessLogger<int>* input = new CudaMemAccessLogger<int>(d_input, prob_size, "Input Datastructure", *memAccessStorage);
+    CudaMemAccessLogger<int>* output = new CudaMemAccessLogger<int>(d_output, prob_size, "Output Datastructure", *memAccessStorage);
 
     constexpr int threads = 32;
     constexpr int blocks = (prob_size/threads)+1;
 
     //kernel<<<blocks, threads>>>(prob_size, input.getDevicePointer(), output.getDevicePointer());
-    kernel << <blocks, threads >> > (prob_size, input, output);
+    kernel <<<blocks, threads >>> (prob_size, input, output);
     checkCudaError(cudaGetLastError());
     cudaDeviceSynchronize();
 
