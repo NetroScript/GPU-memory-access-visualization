@@ -54,6 +54,7 @@ The library takes care of storing all the memory accesses using the provided dat
 
 Should these data formats not be sufficient for your needs, you can easily pass in a custom callback function to the library. This callback function will be called for every memory access and can be used to store the data in any format you like. To get an idea how to use it (as it is not documented), you can take a look inside the `generateTemplatedOutput` function.
 
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Usage
 
@@ -270,6 +271,8 @@ __global__ void kernel(CudaMemAccessLogger<int> data) {
 #### Synchronizing the device
 
 The library does not synchronize the device after each kernel call. This means that if you want to get the data from the device, you need to synchronize the device manually. You do this either by explicitly calling `cudaDeviceSynchronize()` before using any of the `CudaMemAccessStorage` functions to output the data, or you can just place the call to for example `generateJSONOutput` below a synchronous memory operation, like `cudaMemcpy`.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Contributing
 
